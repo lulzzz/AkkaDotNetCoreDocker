@@ -1,0 +1,11 @@
+1	1075111111	Alfredo Herrera	13.00
+2	1075111111	Alfredo Herrera	141.00
+3	1075111111	Alfredo Herrera	122.00
+4	1075111111	Alfredo Herrera	143.00
+5	1075111115	Josh Herrera	873.03
+6	1075111116	Tito Herrera	423.05
+7	1075111117	Mike Herrera	523.00
+8	1075111112	Dawb Herrera	153.60
+9	1075111113	Jessica Herrera	146.04
+10	1075111114	Maria Herrera	163.10
+

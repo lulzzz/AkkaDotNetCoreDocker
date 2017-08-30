@@ -1,0 +1,8 @@
+1075111111	Alfredo Herrera	123.00
+1075111112	Dawb Herrera	153.60
+1075111113	Jessica Herrera	146.04
+1075111114	Maria Herrera	163.10
+1075111115	Josh Herrera	873.03
+1075111116	Tito Herrera	423.05
+1075111117	Mike Herrera	523.00
+

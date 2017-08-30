@@ -5,7 +5,7 @@ using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
-
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -23,13 +23,17 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
             Receive<SuperviorStartUp>(client =>
             {
-                _log.Info($"Client: {client.Client}");
-                _log.Info($"Client: {client.Client}");
-                Console.WriteLine($"Client: {client.Client}");
-                StartUp(client.Client);
+                _log.Info($"Client: {client.ClientAccountFilePath}");
+                Console.WriteLine($"SuperviorStartUp on client: {client.ClientAccountFilePath} and {client.ObligationsFilePath}");
+                StartUp(client.ClientAccountFilePath, client.ObligationsFilePath);
             });
+
             Receive<FailedToLoadAccounts>(m => Self.Tell(typeof(Stop)));
+
+            Receive<FailedToLoadObligations>(m => Self.Tell(typeof(Stop)));
+
             Receive<AboutMe>(me => Console.WriteLine(me.Me));
+
             Receive<SeedData>(data =>
             {
                 foreach (var account in _accounts)
@@ -43,37 +47,45 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             });
         }
 
-        private void SayHi(IActorRef actor)
-        {
-            actor.Tell(new SayHi());
-        }
 
-        private void StartUp(string clientPath)
+        private void StartUp(string accountsFilePath, string obligationsFilePath)
         {
-            var accounts = GetAccountsUnderThisSuperVisor(clientPath);
+            var accounts = GetAccountsUnderThisSuperVisor(accountsFilePath);
+            var obligations = GetAccountsUnderThisSuperVisor(obligationsFilePath);
+
             logger.Tell($"There were {accounts.Count} accounts loaded.");
+
             foreach (var account in accounts)
             {
-                var accountActor = Context.ActorOf<AccountActor>(account.Key.ToString());
-                _log.Info($"Account: {account}");
-                logger.Tell($"Account: {account}");
-                _accounts.Add(new Account(account.Key.ToString()), accountActor);
-                SayHi(accountActor);
+                _log.Info($"Account: {account.Key}");
+                logger.Tell($"Account: {account.Key}");
 
+                var accountActor = Context.ActorOf<AccountActor>(account.Key.ToString());
+         
+                accountActor.Tell(new CreateAccount(account.Key));
+
+                foreach (var obligation in obligations)
+                {
+                    if (obligation.Value == account.Key)
+                    {
+                        accountActor.Tell(new AddObligationToAccount(account.Key.ToString(), new Obligation(obligation.Key.ToString())));
+                        logger.Tell($"Adding obligation# {obligation.Key} on account {account.Key}");
+                    }
+                }
+                _accounts.Add(new Account(account.Key.ToString()), accountActor);
             }
         }
-
-        private Dictionary<string, string> GetAccountsUnderThisSuperVisor(string clientPath)
+        public Dictionary<string, string> GetObligationsUnderThisSuperVisor(string obligationsFilePath)
         {
             Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
-                _log.Info($"Gonna try to open file {clientPath}");
-                logger.Tell($"Gonna try to open file {clientPath}");
-                if (File.Exists(clientPath))
+                _log.Info($"Gonna try to open file {obligationsFilePath}");
+                logger.Tell($"Gonna try to open file {obligationsFilePath}");
+                if (File.Exists(obligationsFilePath))
                 {
-                    string[] readText = File.ReadAllLines(clientPath);
-                    logger.Tell($"{clientPath} has {readText.Length} lines");
+                    string[] readText = File.ReadAllLines(obligationsFilePath);
+                    logger.Tell($"{obligationsFilePath} has {readText.Length} lines");
                     foreach (var row in readText)
                     {
                         var line = row.Split('\t');
@@ -81,8 +93,36 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                         logger.Tell($"Adding account #{line[0]} to dictionary");
                     }
                 }
-                _log.Info($"Successfully processing file {clientPath}");
-                logger.Tell($"Successfully processing file {clientPath}");
+                _log.Info($"Successfully processing file {obligationsFilePath}");
+                logger.Tell($"Successfully processing file {obligationsFilePath}");
+
+            }
+            catch (Exception e)
+            {
+                Self.Tell(new FailedToLoadObligations(e.Message));
+            }
+            return dictionary;
+        }
+        private Dictionary<string, string> GetAccountsUnderThisSuperVisor(string clientsFilePath)
+        {
+            Dictionary<string, string> dictionary = new Dictionary<string, string>();
+            try
+            {
+                _log.Info($"Gonna try to open file {clientsFilePath}");
+                logger.Tell($"Gonna try to open file {clientsFilePath}");
+                if (File.Exists(clientsFilePath))
+                {
+                    string[] readText = File.ReadAllLines(clientsFilePath);
+                    logger.Tell($"{clientsFilePath} has {readText.Length} lines");
+                    foreach (var row in readText)
+                    {
+                        var line = row.Split('\t');
+                        dictionary.Add(line[0], line[1]);
+                        logger.Tell($"Adding account #{line[0]} to dictionary");
+                    }
+                }
+                _log.Info($"Successfully processing file {clientsFilePath}");
+                logger.Tell($"Successfully processing file {clientsFilePath}");
 
             }
             catch (Exception e)
@@ -103,12 +143,22 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         }
         public string Message { get; private set; }
     }
+    public class FailedToLoadObligations
+    {
+        public FailedToLoadObligations(string message)
+        {
+            this.Message = message;
+        }
+        public string Message { get; private set; }
+    }
     public class SuperviorStartUp
     {
-        public SuperviorStartUp(string clientName)
+        public SuperviorStartUp(string clientAccountsFilePath, string obligationsFilePath)
         {
-            this.Client = clientName;
+            ClientAccountFilePath = clientAccountsFilePath;
+            ObligationsFilePath = obligationsFilePath;
         }
-        public string Client { get; private set; }
+        public string ClientAccountFilePath { get; private set; }
+        public string ObligationsFilePath { get; private set; }
     }
 }

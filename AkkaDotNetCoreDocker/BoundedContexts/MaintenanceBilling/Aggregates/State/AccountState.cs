@@ -1,90 +1,73 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Immutable; 
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.State
-{
+{ 
     public class AccountState
     {
-
-        public AccountState(string accountNumber)
+        public AccountState()
+        {
+            Obligations = ImmutableDictionary.Create<string, Obligation>();
+        }
+        public AccountState(string accountNumber) : this()
         {
             this.AccountNumber = accountNumber;
         }
-
-        public void Event(AccountCurrentBalanceUpdated occurred)
+        private AccountState(string accountNumber, double currentBalance, AccountStatus accountStatus, ImmutableDictionary<string, Obligation> obligations)
         {
-            if (occurred.AccountNumber == this.AccountNumber)
-            {
-                this.CurrentBalance = occurred.CurrentBalance;
-            }
-            else
-            {
-                ErrorOut($"You privided {occurred.AccountNumber}");
-            }
+            AccountNumber = accountNumber;
+            CurrentBalance = currentBalance;
+            accountStatus = AccountStatus;
+            Obligations = obligations;
         }
 
-        public void Event(AccountStatusChanged occurred)
+        public AccountState Event(AccountCurrentBalanceUpdated occurred)
         {
-            if (occurred.AccountNumber == this.AccountNumber)
-            {
-                this.AccountStatus = occurred.AccountStatus;
-            }
-            else
-            {
-                ErrorOut($"You privided {occurred.AccountNumber}");
-            }
+            return new AccountState(this.AccountNumber, occurred.CurrentBalance, this.AccountStatus, this.Obligations);
         }
 
-        public void Event(AccountCancelled occurred)
+        public AccountState Event(AccountStatusChanged occurred)
         {
-            if (occurred.AccountNumber == this.AccountNumber)
-            {
-                this.AccountStatus = occurred.AccountStatus;
-            }
-            else
-            {
-                ErrorOut($"You privided {occurred.AccountNumber}");
-            }
+            return new AccountState(this.AccountNumber, this.CurrentBalance, occurred.AccountStatus, this.Obligations);
+        }
+
+        public AccountState Event(AccountCancelled occurred)
+        {
+            return new AccountState(this.AccountNumber, this.CurrentBalance, occurred.AccountStatus, this.Obligations);
+        }
+
+        public AccountState Event(ObligationAddedToAccount occurred)
+        {
+            return new AccountState(this.AccountNumber, this.CurrentBalance, this.AccountStatus, this.Obligations.Add(occurred.Obligation.ObligationNumber, occurred.Obligation));
+        }
+
+        public AccountState Event(ObligationAssessedConcept occurred)
+        {
+            var trans = new FinancialTransaction(occurred.FinancialConcept, occurred.Amount);
+            this.Obligations[occurred.ObligationNumber]?.PostTransaction( trans);
+            return new AccountState(this.AccountNumber, this.CurrentBalance, this.AccountStatus, this.Obligations);
+
+        }
+        public AccountState Event(ObligationSettledConcept occurred)
+        {
+            var trans = new FinancialTransaction(occurred.FinancialConcept, occurred.Amount);
+            this.Obligations[occurred.ObligationNumber]?.PostTransaction(trans);
+            return new AccountState(this.AccountNumber, this.CurrentBalance, this.AccountStatus, this.Obligations);
+
+        }
+        public AccountState Event(AccountCreated occurred)
+        {
+            return new AccountState(this.AccountNumber);
         }
        
-        public void Event(ObligationAddedToAccount occurred)
-        {
-            if (occurred.AccountNumber == this.AccountNumber)
-            {
-                this.Obligations.Add(occurred.Obligation.ObligationNumber, occurred.Obligation);
-            }
-            else
-            {
-                ErrorOut($"You privided {occurred.AccountNumber}");
-            }
-        }
+        public ImmutableDictionary<string, Obligation> Obligations { get; }
+        public string AccountNumber { get; }
+        public double CurrentBalance { get; }
+        private AccountStatus AccountStatus { get; }
 
-		public void Event(ObligationAssessedConcept occurred)
-		{
-            if (Obligations.ContainsKey(occurred.ObligationNumber))
-			{
-                var obligation = Obligations[occurred.ObligationNumber];
-				
-            }
-			else
-			{
-                ErrorOut($"Obligation {occurred.ObligationNumber} does not exists on this account.");
-			}
-		}
-        //Properties
-        public ImmutableDictionary<string, Obligation> Obligations { get; private set; }
-        public string AccountNumber { get; private set; }
-        public double CurrentBalance { get; private set; }
-        public AccountStatus AccountStatus { get; private set; }
-
-        private void ErrorOut(string message)
-        {
-            throw new InvalidAccountProvided($"This account is {this.AccountNumber}. {message}");
-
-        }
     }
 
 

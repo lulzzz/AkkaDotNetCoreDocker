@@ -5,6 +5,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events
     public class AccountCreated : IEvent
     {
         private DateTime _OccurredOn { get; }
+        public string AccountNumber { get; }
         private Guid _UniqueGuid { get; }
 
         public DateTime OccurredOn()
@@ -15,8 +16,9 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events
         {
             return _UniqueGuid;
         }
-        public AccountCreated()
+        public AccountCreated(string accountNumber)
         {
+            AccountNumber = accountNumber;
             _UniqueGuid = Guid.NewGuid();
             _OccurredOn = DateTime.Now;
         }

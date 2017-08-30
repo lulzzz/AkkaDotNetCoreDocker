@@ -19,12 +19,18 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
            {
                for (int i = 1; i <= make.NumberOfRecords; i++)
                {
-                   DomainCommands.Add(new SettleFinancialConcept());
+                   // Init
+                   DomainCommands.Add(new CreateAccount(""));
+                   // Populate
+                   DomainCommands.Add(new AddObligationToAccount("",new Models.Obligation("")));
+                   // Bill
                    DomainCommands.Add(new AssessFinancialConcept());
-				   DomainCommands.Add(new CancelAccount());
-
-				   logger.Tell($"Added Domain Command {i}");
-
+                   // Pay
+                   DomainCommands.Add(new SettleFinancialConcept());
+                   // Cancel 
+                   DomainCommands.Add(new CancelAccount());
+                   // Log
+                   logger.Tell($"Added Domain Command {i}");
                };
                Sender.Tell(new SeedData(DomainCommands));
            });
