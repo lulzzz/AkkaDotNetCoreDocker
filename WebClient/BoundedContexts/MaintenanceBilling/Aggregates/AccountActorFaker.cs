@@ -9,12 +9,10 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
     class AccountActorFaker : ReceiveActor
     {
         public List<IDomainCommand> DomainCommands = new List<IDomainCommand>();
-        readonly IActorRef logger;
 
         public AccountActorFaker()
         {
-            logger = Context.ActorOf(Props.Create<LoggingActor>(), Self.Path.Name + "logger");
-
+            
             Receive<MakeFakeData>(make =>
            {
                for (int i = 1; i <= make.NumberOfRecords; i++)
@@ -29,8 +27,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                    DomainCommands.Add(new SettleFinancialConcept());
                    // Cancel 
                    DomainCommands.Add(new CancelAccount());
-                   // Log
-                   logger.Tell($"Added Domain Command {i}");
+
                };
                Sender.Tell(new SeedData(DomainCommands));
            });

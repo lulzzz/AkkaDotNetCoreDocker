@@ -21,24 +21,24 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Recover<SnapshotOffer>(offer => offer.Snapshot is AccountState, offer =>
             {
                 _accountState = (AccountState)offer.Snapshot;
-                _log.Info($"Snapshot recovered.");
+                _log.Debug($"Snapshot recovered.");
             });
 
             Recover<AccountCreated>(@event =>
             {
                 _accountState = _accountState.Event(@event);
-                _log.Info($"Recovery event: AccountCreated");
+                _log.Debug($"Recovery event: AccountCreated");
             });
 
             Recover<ObligationAddedToAccount>(@event =>
             {
                 _accountState = _accountState.Event(@event);
-                _log.Info($"Recovery event: ObligationAddedToAccount");
+                _log.Debug($"Recovery event: ObligationAddedToAccount");
             });
             Recover<SuperSimpleSuperCoolEventFoundByRules>(@event => 
             {
                 _accountState = _accountState.Event(@event);
-                _log.Info($"Recovery event: SuperSimpleSuperCoolEventFoundByRules");
+                _log.Debug($"Recovery event: SuperSimpleSuperCoolEventFoundByRules");
             });
 
 
@@ -50,6 +50,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 Sender.Tell(new AboutMe(message));
                 ApplySnapShotStrategy();
             });
+            Command<TellMeYourStatus>(asking => Sender.Tell(new TellMeYourStatus($"{_accountState.AccountNumber} I am alive!")));
 
             /* Creating the account's initial state is more of a one-time thing */
             Command<CreateAccount>(command =>
@@ -64,13 +65,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                     Persist(@event, s =>
                     {
                         _accountState = _accountState.Event(@event);
-                        _log.Info($"Created account {command.AccountNumber}");
+                        _log.Debug($"Created account {command.AccountNumber}");
 
                     });
                 }
                 else
                 {
-                    _log.Info($"You are trying to create {command.AccountNumber}, but has already been created. No action taken.");
+                    _log.Debug($"You are trying to create {command.AccountNumber}, but has already been created. No action taken.");
                 }
 
             });
@@ -94,13 +95,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                     {
                         _accountState = _accountState.Event(@event);
                         ApplySnapShotStrategy();
-                        _log.Info($"Added obligation {command.Obligation.ObligationNumber} to account {command.AccountNumber}");
+                        _log.Debug($"Added obligation {command.Obligation.ObligationNumber} to account {command.AccountNumber}");
                         /* Optionally, put this command on the external notificaiton system (i.e. Kafka) */
                     });
                 }
                 else
                 {
-                    _log.Info($"You are trying to add obligation {command.Obligation.ObligationNumber} an account which has exists on account {command.AccountNumber}. No action taken.");
+                    _log.Debug($"You are trying to add obligation {command.Obligation.ObligationNumber} an account which has exists on account {command.AccountNumber}. No action taken.");
                 }
             });
         }
@@ -123,7 +124,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                     {
                         _accountState = _accountState.Event(@event);
                         ApplySnapShotStrategy();
-                        _log.Info($"Processing event {@event.ToString()} from business rules for command {command.ToString()}");
+                        _log.Debug($"Processing event {@event.ToString()} from business rules for command {command.ToString()}");
                     });
                 });
             }

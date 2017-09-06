@@ -1,6 +1,10 @@
 # Autosave files
 *~
 
+SampleData/*.txt
+SampleData/Obligations/*.txt
+akka_demo.db
+
 # build
 [Oo]bj/
 [Bb]in/

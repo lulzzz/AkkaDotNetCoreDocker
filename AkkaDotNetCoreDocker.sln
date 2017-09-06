@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AkkaDotNetCoreDocker", "AkkaDotNetCoreDocker\AkkaDotNetCoreDocker.csproj", "{AF22970A-21A5-40A6-9A3D-ECCD4FC96E7F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebClient", "WebClient\WebClient.csproj", "{3C645811-8485-4B4D-8C12-0FDA97030424}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,10 +9,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{AF22970A-21A5-40A6-9A3D-ECCD4FC96E7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AF22970A-21A5-40A6-9A3D-ECCD4FC96E7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AF22970A-21A5-40A6-9A3D-ECCD4FC96E7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AF22970A-21A5-40A6-9A3D-ECCD4FC96E7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C645811-8485-4B4D-8C12-0FDA97030424}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C645811-8485-4B4D-8C12-0FDA97030424}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C645811-8485-4B4D-8C12-0FDA97030424}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C645811-8485-4B4D-8C12-0FDA97030424}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0

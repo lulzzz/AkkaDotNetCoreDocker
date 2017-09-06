@@ -22,9 +22,10 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Receive<AboutMe>(me => Console.WriteLine($"About me: {me.Me}"));
             Receive<SuperviorStartUp>(client =>
             {
-                _log.Info($"Client: {client.ClientAccountFilePath}");
+                _log.Debug($"Client: {client.ClientAccountFilePath}");
                 StartUp(client, client.ClientAccountFilePath, client.ObligationsFilePath);
             });
+            Receive<TellMeYourStatus>(asking => Sender.Tell(new TellMeYourStatus($"{Self.Path.Name} I am alive! I have {_accounts.Count} accounts.")));
 
             /* Example of custom error handling, also using messages */
             Receive<FailedToLoadAccounts>(m => Self.Tell(typeof(Stop)));
@@ -42,10 +43,10 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
             foreach (var account in accounts)
             {
-                _log.Info($"Processing Account: {account.Key}");
+                _log.Debug($"Processing Account: {account.Key}");
                 if (!_accounts.ContainsKey(account.Key))
                 {
-                    _log.Info($"Account {account.Key} isn't in our registry, processing it...");
+                    _log.Debug($"Account {account.Key} isn't in our registry, processing it...");
 
                     var accountActor = Context.ActorOf<AccountActor>(name: account.Key);
                     accountActor.Tell(new CreateAccount(account.Key));
@@ -61,11 +62,11 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                     accountActor.Tell(new SayHi($"Hello {account.Key}"));
 
                     _accounts.Add(account.Key.ToString(), accountActor);
-                    _log.Info($"/Account {account.Key} ... done.");
+                    _log.Debug($"/Account {account.Key} ... done.");
                 }
                 else
                 {
-                    _log.Info($"{account.Key} already registered. No action taken.");
+                    _log.Debug($"{account.Key} already registered. No action taken.");
                 }
             }
         }
@@ -76,7 +77,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
-                _log.Info($"Gonna try to open file {obligationsFilePath}");
+                _log.Debug($"Gonna try to open file {obligationsFilePath}");
                 if (File.Exists(obligationsFilePath))
                 {
                     string[] readText = File.ReadAllLines(obligationsFilePath);
@@ -86,7 +87,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                         dictionary.Add(line[0], line[1]);
                     }
                 }
-                _log.Info($"Successfully processing file {obligationsFilePath}");
+                _log.Debug($"Successfully processing file {obligationsFilePath}");
             }
             catch (Exception e)
             {
@@ -100,7 +101,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
-                _log.Info($"Gonna try to open file {clientsFilePath}");
+                _log.Debug($"Gonna try to open file {clientsFilePath}");
                 if (File.Exists(clientsFilePath))
                 {
                     string[] readText = File.ReadAllLines(clientsFilePath);
@@ -110,7 +111,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                         dictionary.Add(line[0], line[1]);
                     }
                 }
-                _log.Info($"Successfully processing file {clientsFilePath}");
+                _log.Debug($"Successfully processing file {clientsFilePath}");
             }
             catch (Exception e)
             {
