@@ -57,14 +57,11 @@ namespace WebClient
         {
             return ConfigurationFactory.ParseString($@" 
 
-                #akka.actor.debug.receive = on 
-                #akka.actor.debug.autoreceive = on
-                #akka.actor.debug.lifecycle = on
-                #akka.actor.debug.event-stream = on
-                #akka.actor.debug.unhandled = on
+                akka.actor.debug.lifecycle = on
+                akka.actor.debug.unhandled = on
                 
                 akka {{ loglevel = ERROR }}
-                akka.loggers=[""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""]
+                akka.loggers=[""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]
                 
                 akka.actor.serializers {{ hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""}}
                 akka.actor.serialization-bindings {{ ""System.Object"" = hyperion }}
