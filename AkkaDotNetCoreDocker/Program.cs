@@ -9,121 +9,59 @@ namespace AkkaDotNetCoreDocker
     {
         static void Main(string[] args)
         {
-            var config = ConfigurationFactory.ParseString(@"
-                akka {  
-	          loggers=[""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""]
-	          stdout-loglevel = DEBUG
-	          loglevel = DEBUG
-	          log-config-on-start = on         
-	        actor {               
-		        debug {
-				        receive = on # log any received message
-				        autoreceive= on # log automatically received messages, e.g. PoisonPill
-				        lifecycle = on # log actor lifecycle changes
-				        fsm = on # log all LoggingFSMs for events, transitions and timers
-				        event-stream = on # log subscription changes for Akka.NET event stream
-				        unhandled = on # log unhandled messages sent to actors
-			        }
-			    serializers {
-                 hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-              }
-          serialization-bindings {
-                ""System.Object"" = hyperion
-                  }
-       }
-	    }       
-      ﻿akka.persistence{
+            var mainConfig = ConfigurationFactory.Default();
+            mainConfig = mainConfig.WithFallback(getConfiguration());
 
-	      journal {
-		      plugin = ""akka.persistence.journal.sqlite""
-
-              sqlite {
-		
-			      # qualified type name of the SQLite persistence journal actor
-			      class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
-
-                  # dispatcher used to drive journal actor
-                plugin-dispatcher = ""akka.actor.default-dispatcher""
-
-                  # connection string used for database access
-                connection-string = ""Data Source=C:\\dev\\sqlitedb\\akka.db; Version=3;""
-			
-			      # connection string name for .config file used when no connection string has been provided
-			      connection-string-name = """"
-
-			      # default SQLite commands timeout
-			      connection-timeout = 30s
-
-			      # SQLite table corresponding with persistent journal
-			      table-name = event_journal
-			
-			      # metadata table
-			      metadata-table-name = journal_metadata
-
-			      # should corresponding journal table be initialized automatically
-			      auto-initialize = off
-
-			      # timestamp provider used for generation of journal entries timestamps
-			      timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
-
-
-                  circuit -breaker {
-				      max-failures = 5
-				      call-timeout = 20s
-				      reset-timeout = 60s
-			      }
-		      }
-	      }
-
-	      snapshot-store {
-		      plugin = ""akka.persistence.snapshot-store.sqlite""
-
-              sqlite {
-		
-			      # qualified type name of the SQLite persistence journal actor
-			      class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
-
-                  # dispatcher used to drive journal actor
-                plugin dispatcher = ""akka.actor.default-dispatcher""
-
-                  # connection string used for database access
-                connection-string = ""Data Source=C:\\dev\\sqlitedb\\akka.db; Version=3;""
-
-			      # connection string name for .config file used when no connection string has been provided
-			      connection-string-name = """"
-
-			      # default SQLite commands timeout
-			      connection-timeout = 30s
-			
-			      # SQLite table corresponding with persistent journal
-			      table-name = snapshot_store
-
-			      # should corresponding journal table be initialized automatically
-			      auto-initialize = off
-
-		      }
-	      }
-      }
- 
-
-");
-
-            using (var system = ActorSystem.Create("demo-system",config))
+            using (var system = ActorSystem.Create("demo-system", mainConfig))
             {
-
                 var supervisor = system.ActorOf(Props.Create<AccountActorSupervisor>(), name: "demo-supervisor");
                 supervisor.Tell(new SuperviorStartUp(
-                    clientAccountsFilePath: @"C:\dev\AkkaDotNetCoreDocker\SampleData\Raintree.txt",
-                    obligationsFilePath: @"C:\dev\AkkaDotNetCoreDocker\SampleData\Obligations\Raintree.txt"
+                    clientAccountsFilePath: @"../SampleData/Raintree.txt",
+                    obligationsFilePath: @"../SampleData/Obligations/Raintree.txt"
                     ));
-
-                //var faker = system.ActorOf(Props.Create<AccountActorFaker>(), name: "faker");
-                //faker.Tell(new MakeFakeData(6), supervisor);
 
                 Console.WriteLine("Hello World!");
                 Console.ReadLine();
 
             }
+        }
+
+
+        public static Config getConfiguration()
+        {
+            return ConfigurationFactory.ParseString($@" 
+
+			    #akka.actor.debug.receive = on 
+                #akka.actor.debug.autoreceive = on
+                #akka.actor.debug.lifecycle = on
+                #akka.actor.debug.event-stream = on
+                #akka.actor.debug.unhandled = on
+                
+                akka {{ loglevel = DEBUG }}
+                akka.loggers=[""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""]
+                
+                akka.actor.serializers {{ hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""}}
+                akka.actor.serialization-bindings {{ ""System.Object"" = hyperion }}
+                 
+                akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
+                
+                akka.persistence.journal.sqlite.class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                akka.persistence.journal.sqlite.plugin-dispatcher = ""akka.actor.default-dispatcher""
+                akka.persistence.journal.sqlite.connection-timeout = 30s
+                akka.persistence.journal.sqlite.table-name = event_journal
+                akka.persistence.journal.sqlite.metadata-table-name = journal_metadata
+                akka.persistence.journal.sqlite.auto-initialize = on
+                akka.persistence.journal.sqlite.timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
+                akka.persistence.journal.sqlite.connection-string = ""Data Source=../../../akka_demo.db""          
+                
+                akka.persistence.snapshot-store.sqlite.connection-string = ""Data Source=../../../akka_demo.db""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sqlite""
+                akka.persistence.snapshot-store.sqlite.class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
+                akka.persistence.snapshot-store.sqlite.plugin-dispatcher = ""akka.actor.default-dispatcher""
+                akka.persistence.snapshot-store.sqlite.connection-timeout = 30s
+                akka.persistence.snapshot-store.sqlite.table-name = snapshot_store
+                akka.persistence.snapshot-store.sqlite.auto-initialize = on
+            ");
         }
     }
 }

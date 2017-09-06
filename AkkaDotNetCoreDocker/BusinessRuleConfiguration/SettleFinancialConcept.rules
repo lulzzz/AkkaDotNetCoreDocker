@@ -1,0 +1,9 @@
+#Structure is as follows
+#   Hierarchy   |   Rule |   Rule Parameters
+Raintree, 1075, 10751111111 | FinancialConceptMustHaveBeenBilledOnOblicaiton
+Raintree, 1075, * | AccountBalanceMustNotBeNegative
+#EitherOne{
+       Raintree, 1075, * | MinimumPartialApplicationPercentageAllowed | 95% 
+    ## Raintree, 1075, * | MinimumPartialApplicationAmountAllowed | 15$
+#}
+

@@ -1,0 +1,3 @@
+#   Hierarchy   |   Rule |   Rule Parameters
+Raintree, 1075, 10751111111 | ApplyInOrder | [Dues, Interest, Tax] ### '[list containing concepts in order]' 
+#Raintree, 1075, 10751111111 | ApplyEvenlyAmongAllConcepts | N/A

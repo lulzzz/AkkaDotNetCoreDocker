@@ -18,6 +18,6 @@
     <Compile Remove="DemoRun.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="snapshots\" />
+    <Folder Include="BoundedContexts\MaintenanceBilling\Aggregates\State\" />
   </ItemGroup>
 </Project>

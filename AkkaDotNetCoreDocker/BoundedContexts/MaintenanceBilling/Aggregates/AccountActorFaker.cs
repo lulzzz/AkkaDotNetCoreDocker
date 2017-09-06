@@ -9,7 +9,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
     class AccountActorFaker : ReceiveActor
     {
         public List<IDomainCommand> DomainCommands = new List<IDomainCommand>();
-        private readonly IActorRef logger;
+        readonly IActorRef logger;
 
         public AccountActorFaker()
         {

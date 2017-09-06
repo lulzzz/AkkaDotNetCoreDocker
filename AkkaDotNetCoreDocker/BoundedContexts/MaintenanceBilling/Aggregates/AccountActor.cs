@@ -1,203 +1,142 @@
-﻿using System;
-using System.Collections.Immutable;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.State;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules;
-using System.Collections.Generic;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
     public class AccountActor : ReceivePersistentActor
     {
         public override string PersistenceId => Self.Path.Name;
+        readonly ILoggingAdapter _log = Logging.GetLogger(Context);
 
-        private readonly IActorRef logger;
-
-        private readonly ILoggingAdapter _log = Logging.GetLogger(Context);
-
-        private AccountState _accountState;
-        private List<string> testState = new List<string>();
+        /* This Actor's State */
+        AccountState _accountState = new AccountState();
 
         public AccountActor()
         {
-            logger = Context.ActorOf(Props.Create<LoggingActor>(), Self.Path.Name + "logger");
-
-            //Recovery
-            Recover<SnapshotOffer>(offer =>
+            /* Hanlde Recovery */
+            Recover<SnapshotOffer>(offer => offer.Snapshot is AccountState, offer =>
             {
-                if (offer.Snapshot is AccountState messages) // null check
-                {
-                    _accountState = messages;
-                }
-                if (offer.Snapshot is List<string> lst) // null check
-                {
-                    testState = lst;
-                }
+                _accountState = (AccountState)offer.Snapshot;
+                _log.Info($"Snapshot recovered.");
             });
+
             Recover<AccountCreated>(@event =>
             {
+                _accountState = _accountState.Event(@event);
                 _log.Info($"Recovery event: AccountCreated");
-                _accountState.Event(@event);
-                 
             });
+
             Recover<ObligationAddedToAccount>(@event =>
             {
+                _accountState = _accountState.Event(@event);
                 _log.Info($"Recovery event: ObligationAddedToAccount");
-                _accountState.Event(@event);
             });
-            Recover<AccountCurrentBalanceUpdated>(@event =>
+            Recover<SuperSimpleSuperCoolEventFoundByRules>(@event => 
             {
-                _log.Info($"Recovery event: AccountCurrentBalanceUpdated");
-                _accountState.Event(@event);
-            });
-            Recover<AccountStatusChanged>(@event =>
-            {
-                _log.Info($"Recovery event: AccountStatusChanged");
-                _accountState.Event(@event);
-            });
-            Recover<AccountCancelled>(@event =>
-            {
-                _log.Info($"Recovery event: AccountCancelled");
-                _accountState.Event(@event);
+                _accountState = _accountState.Event(@event);
+                _log.Info($"Recovery event: SuperSimpleSuperCoolEventFoundByRules");
             });
 
 
-            //Commands we can handle
-            Command<CreateAccount>(cmd => Persist(cmd, s =>
-            {
-                _accountState = new AccountState(s.AccountNumber);
-                ApplySnapShotStrategy();
-                testState.Add($"CreateAccount {s.AccountNumber}");
-
-            }));
-
-            Command<AddObligationToAccount>(cmd => Persist(cmd, s =>
-            {
-                Self.Tell(new ObligationAddedToAccount(s.AccountNumber, s.Obligation));
-                ApplySnapShotStrategy();
-                Console.WriteLine($"******************AddObligationToAccount {s.AccountNumber} - {s.Obligation.ObligationNumber}*******");
-                testState.Add($"AddObligationToAccount {s.AccountNumber} - {s.Obligation.ObligationNumber}");
-            }));
-
-            Command<SettleFinancialConcept>(cmd => Persist(cmd, s =>
-            {
-                /**
-                 * Here we can call Business Rules to validate and do whatever.
-                 * Then, based on the outcome generated events.
-                 * In this example, we are simply going to accept it and updated our state.
-                 */
-                bool conceptHasBeenBilled = false;
-
-                foreach (var trans in _accountState.Obligations[s.ObligationNumber].GetTransactions())
-                {
-                    if (trans.Value.FinancialConcept == s.FinancialConcept)
-                    {
-                        conceptHasBeenBilled = true;
-                        var settledEvent = new ObligationSettledConcept(s.ObligationNumber, s.FinancialConcept, s.Amount);
-                        var newBalance = CalculateNewCurrentBalanceIfEventIsApplied(settledEvent); //Business rule
-                        if (newBalance >= 0.00)
-                        {
-                            var balanceEvent = new AccountCurrentBalanceUpdated(_accountState.AccountNumber, newBalance);
-                            Self.Tell(settledEvent);
-                            Self.Tell(balanceEvent);
-                            ApplySnapShotStrategy();
-                        }
-                        else
-                        {
-                            Sender.Tell(new FinancialConceptNotSettled(s, new AccountBalanceWouldBeNegative()));
-                        }
-                    }
-                }
-
-                if (!conceptHasBeenBilled)
-                {
-                    Sender.Tell(new FinancialConceptNotSettled(s, new FinancialConceptMustBeBilled()));
-                }
-            }));
-
-            Command<AssessFinancialConcept>(cmd => Persist(cmd, s =>
-            {
-                var settledEvent = new ObligationSettledConcept(s.ObligationNumber, s.FinancialConcept, s.Amount);
-                var newBalance = CalculateNewCurrentBalanceIfEventIsApplied(settledEvent); //Business rule
-                var balanceEvent = new AccountCurrentBalanceUpdated(_accountState.AccountNumber, newBalance);
-                Self.Tell(settledEvent);
-                Self.Tell(balanceEvent);
-                ApplySnapShotStrategy();
-
-            }));
-
-            Command<CancelAccount>(cmd => Persist(cmd, s =>
-            {
-                ZeroOutBucketsOnObligations(); // We could kick-off a second process if we zeroed out amounts, for example
-                Self.Tell(new AccountCancelled(s.Account.AccountNumber, AccountStatus.Closed));
-                Self.Tell(new AccountStatusChanged(s.Account.AccountNumber, AccountStatus.Closed));
-                Self.Tell(new AccountCurrentBalanceUpdated(_accountState.AccountNumber, 0.0));
-                ApplySnapShotStrategy();
-            }));
-
-            //Special handlers
-            Command<SaveSnapshotSuccess>(success => DeleteMessages(success.Metadata.SequenceNr));
-            Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
+            /* Commands we can handle */
             Command<SayHi>(hi =>
             {
-                string message = $"{hi}: I am {_accountState?.AccountNumber}";
+                string message = $"Message: {hi.Message} (Account: {_accountState?.AccountNumber})";
+                _accountState.Event(new SomeOneSaidHiToMe(_accountState?.AccountNumber, hi?.Message));
                 Sender.Tell(new AboutMe(message));
+                ApplySnapShotStrategy();
+            });
+
+            /* Creating the account's initial state is more of a one-time thing */
+            Command<CreateAccount>(command =>
+            {
+                if (_accountState.AccountNumber == null)
+                {
+                    /**
+					 * we want to use behaviours here to make sure we don't allow the account to be created 
+					 * once it has been created -- Become AccountBoarded perhaps?
+					  */
+                    var @event = new AccountCreated(command.AccountNumber);
+                    Persist(@event, s =>
+                    {
+                        _accountState = _accountState.Event(@event);
+                        _log.Info($"Created account {command.AccountNumber}");
+
+                    });
+                }
+                else
+                {
+                    _log.Info($"You are trying to create {command.AccountNumber}, but has already been created. No action taken.");
+                }
+
+            });
+
+            /* Example of running comannds through business rules */
+            Command<SettleFinancialConcept>(command => ApplyBusinessRules(command));
+            Command<AssessFinancialConcept>(command => ApplyBusinessRules(command));
+            Command<CancelAccount>(command => ApplyBusinessRules(command));
+
+            /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
+            Command<SaveSnapshotSuccess>(success => _log.Debug($"Saved snapshot") /*DeleteMessages(success.Metadata.SequenceNr);*/ );
+            Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
+
+            /* For the demo there no business rules are assumed when adding an obligation to an account, but there most likely will be. */
+            Command<AddObligationToAccount>(command =>
+            {
+                if (!_accountState.Obligations.ContainsKey(command.Obligation.ObligationNumber))
+                {
+                    var @event = new ObligationAddedToAccount(command.AccountNumber, command.Obligation);
+                    Persist(@event, s =>
+                    {
+                        _accountState = _accountState.Event(@event);
+                        ApplySnapShotStrategy();
+                        _log.Info($"Added obligation {command.Obligation.ObligationNumber} to account {command.AccountNumber}");
+                        /* Optionally, put this command on the external notificaiton system (i.e. Kafka) */
+                    });
+                }
+                else
+                {
+                    _log.Info($"You are trying to add obligation {command.Obligation.ObligationNumber} an account which has exists on account {command.AccountNumber}. No action taken.");
+                }
             });
         }
-        private double ZeroOutBucketsOnObligations()
+
+        private void ApplyBusinessRules(IDomainCommand command)
         {
-            double amountZeroedOut = 0.00;
-            foreach (var obligation in _accountState.Obligations)
+            /**
+			 * Here we can call Business Rules to validate and do whatever.
+			 * Then, based on the outcome generated events.
+			 * In this example, we are simply going to accept it and updated our state.
+			 */
+            var result = RulesApplicator.ApplyBusinessRules(_accountState, command);
+            if (result.Success)
             {
-                // each obligations financial buckets with non-zero balances must be zeroed out.
-                foreach (var bucket in obligation.Value.GetBucketBalances())
+                /* I may want to do old vs new state comparisons for other reasons
+				 *  but ultimately we just update the state.. */
+                result.GeneratedEvents.ForEach(@event =>
                 {
-                    if (bucket.Value > 0.00)
+                    Persist(@event, s =>
                     {
-                        var waiveamount = bucket.Value * -1;
-                        amountZeroedOut += waiveamount;
-                        obligation.Value.PostTransaction(new FinancialTransaction(bucket.Key, waiveamount));
-                    }
-                }
+                        _accountState = _accountState.Event(@event);
+                        ApplySnapShotStrategy();
+                        _log.Info($"Processing event {@event.ToString()} from business rules for command {command.ToString()}");
+                    });
+                });
             }
-            return amountZeroedOut;
-        }
-        private double CalculateNewCurrentBalanceIfEventIsApplied(ObligationSettledConcept settledEvent)
-        {
-            return _accountState.CurrentBalance + settledEvent.Amount;
-            //Obviously, a whole lot more complex in real life.
         }
 
-        public void ApplySnapShotStrategy()
+		/*Example of how snapshotting can be custom to the actor, in this case per 'Account' events*/
+		public void ApplySnapShotStrategy()
         {
-            if (this.LastSequenceNr % 3 == 0)
+            if (this.LastSequenceNr % 5 == 0)
             {
                 SaveSnapshot(_accountState);
-                SaveSnapshot(testState);
+                _log.Debug($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");
             }
         }
-        public void LoadAccount()
-        {
-            _log.Debug($"Hello! From: {Self.Path.Name}");
-        }
-    }
-
-    public class AboutMe
-    {
-        public AboutMe(string me)
-        {
-            Me = me;
-        }
-
-        public string Me { get; set; }
-    }
-
-    public class SayHi
-    {
-    }
+    } 
 }

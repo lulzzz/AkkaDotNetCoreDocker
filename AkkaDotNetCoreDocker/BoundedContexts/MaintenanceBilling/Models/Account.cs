@@ -18,6 +18,10 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models
         public double CurrentBalance { get; set; }
         public List<Obligation> Obligations { get; set; }
 
+        public override string ToString()
+        {
+            return $"{AccountNumber}";
+        }
     }
 
  

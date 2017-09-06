@@ -1,15 +1,14 @@
 ﻿using System;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events
 {
-
-    public class AccountCancelled : IEvent
+    public class SuperSimpleSuperCoolEventFoundByRules : IEvent
     {
-        public AccountStatus AccountStatus { get; private set; }
+
         public string AccountNumber { get; private set; }
-        private DateTime _OccurredOn { get; }
-        private Guid _UniqueGuid { get; }
+        DateTime _OccurredOn { get; }
+        Guid _UniqueGuid { get; }
+        public string Message { get; private set; }
 
         public DateTime OccurredOn()
         {
@@ -21,15 +20,16 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events
             return _UniqueGuid;
         }
 
-        public AccountCancelled()
+        public SuperSimpleSuperCoolEventFoundByRules(string message)
         {
             _UniqueGuid = Guid.NewGuid();
             _OccurredOn = DateTime.Now;
+            Message = message;
         }
 
-        public AccountCancelled(string accountNumber, AccountStatus status) : this()
+        public SuperSimpleSuperCoolEventFoundByRules(string accountNumber, string message) : this(message)
         {
-            AccountStatus = status;
+            Message = message;
             AccountNumber = accountNumber;
         }
     }
