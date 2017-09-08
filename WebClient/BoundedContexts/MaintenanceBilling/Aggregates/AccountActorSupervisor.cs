@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -18,27 +17,31 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         /**
          * Actor's state = just a list of account under supervision
          */
-        ImmutableDictionary<string, IActorRef> _accounts = ImmutableDictionary<string, IActorRef>.Empty;
+        Dictionary<string, IActorRef> _accounts = new Dictionary<string, IActorRef>();
 
         public AccountActorSupervisor()
         {
             /*** recovery section **/
             Recover<SnapshotOffer>(offer =>
             {
-                _accounts = (ImmutableDictionary<string, IActorRef>)offer.Snapshot;
-                _log.Debug($"Snapshot recovered.");
+                _accounts = (Dictionary<string, IActorRef>)offer.Snapshot;
+                _log.Info($"Snapshot recovered.");
             });
 
-            Recover<AccountAddedToSupervision>(command => AddThisAccountToState(command.AccountNumber));
+            Recover<AccountAddedToSupervision>(command => ReplayEvent(command.AccountNumber));
             /*** end recovery section **/
 
             /** commands **/
             Command<SimulateBoardingOfAccounts>(client =>
             {
-                _log.Debug($"Client: {client.ClientAccountFilePath}");
-                var boardingActor = Context.ActorOf<BoardAccountActor>(name: "Boarding");
+                _log.Info($"Boarding client: {client.ClientName}");
+                var boardingActor = Context.ActorOf<BoardAccountActor>(name: $"Client-{client.ClientName}");
                 boardingActor.Tell(client);
+                Sender.Tell($"Started boarding of {client.ClientName} accounts at {DateTime.Now} ");
+
             });
+
+            Command<string>(NoMessage => { });
 
             Command<SuperviseThisAccount>(command => ProcessSupervision(command));
 
@@ -93,7 +96,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         {
             if (!_accounts.ContainsKey(command.Account.AccountNumber))
             {
-                var @event = AddThisAccountToState(command.Account.AccountNumber);
+                AccountAddedToSupervision @event = AddThisAccountToState(command.Account.AccountNumber);
                 Persist(@event, s =>
                 {
                     var address = InstantiateThisAccount(command.Account.AccountNumber);
@@ -106,12 +109,23 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 _log.Info($"You tried to load account {command.Account.AccountNumber} which has already been loaded");
             }
         }
-
+        private void ReplayEvent(string accountNumber)
+        {
+            if (_accounts.ContainsKey(accountNumber))
+            {
+                _log.Info($"Supervisor already has {accountNumber} in state, why are you adding it again?");
+            }
+            else
+            {
+                _accounts.Add(accountNumber, null);
+                _log.Info($"Replayed event on {accountNumber}");
+            }
+        }
         private AccountAddedToSupervision AddThisAccountToState(string accountNumber)
         {
             if (!_accounts.ContainsKey(accountNumber))
             {
-                _accounts = _accounts.Add(accountNumber, null);
+                _accounts.Add(accountNumber, null);
                 var @event = new AccountAddedToSupervision(accountNumber);
                 return @event;
             }
@@ -122,7 +136,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             if (_accounts.ContainsKey(accountNumber))
             {
                 var accountActor = Context.ActorOf<AccountActor>(name: accountNumber);
-                _accounts = _accounts.SetItem(accountNumber,accountActor);
+                _accounts[accountNumber] = accountActor;
                 _log.Debug($"Instantiated account {accountActor.Path.Name}");
                 return accountActor;
             }
@@ -135,8 +149,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         {
             if (this.LastSequenceNr % 1000 == 0)
             {
-                SaveSnapshot(_accounts);
-                _log.Debug($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");
+                var state = new Dictionary<string, IActorRef>();
+                foreach (var record in _accounts.Keys)
+                {
+                    state.Add(record, null);
+                }
+                SaveSnapshot(state);
+                _log.Info($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");
             }
         }
     }

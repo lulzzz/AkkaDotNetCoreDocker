@@ -1,41 +1,46 @@
-﻿// Copyright 2014-2015 Aaron Stannard, Petabridge LLC
-//  
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
-// this file except in compliance with the License. You may obtain a copy of the 
-// License at 
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0 
-// 
-// Unless required by applicable law or agreed to in writing, software distributed 
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the 
-// specific language governing permissions and limitations under the License.
-using Topshelf;
+﻿using System;
+using Akka.Actor;
+using Akka.Configuration;
+using SeedNode.Actors;
 
-namespace Lighthouse
+namespace SeedNode
 {
     class Program
     {
-        static int Main(string[] args)
+        static void Main(string[] args)
         {
-            return (int) HostFactory.Run(x =>
-            {
-                x.Service<LighthouseService>(s =>
-                {
-                    s.ConstructUsing(ss => new LighthouseService());
-                    s.WhenStarted(ss => ss.Start());
-                    s.WhenStopped(ss => ss.StopAsync().Wait());
-                });
+            var mainConfig = ConfigurationFactory.Default();
+            mainConfig = mainConfig.WithFallback(getConfiguration());
 
-                x.SetServiceName("Lighthouse");
-                x.SetDisplayName("Lighthouse Service Discovery");
-                x.SetDescription("Lighthouse Service Discovery for Akka.NET Clusters");
+            var system  = ActorSystem.Create("demo-system", mainConfig);
 
-                x.RunAsNetworkService();
-                x.StartAutomatically();
-                x.UseNLog();
-                x.EnableServiceRecovery(r => r.RestartService(1));
-            });
+            var seed = system.ActorOf(Props.Create<SeedNodeActor>(),"clusterListener");
+            seed.Tell("How are you?");
+
+            Console.ReadLine();
+        }
+        public static Config getConfiguration()
+        {
+            return ConfigurationFactory.ParseString($@" 
+
+                akka.actor.debug.lifecycle = on
+                akka.actor.debug.unhandled = on
+                
+                akka.loglevel = DEBUG
+                akka.loggers=[""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]
+                
+                akka.actor.serializers {{ hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""}}
+                akka.actor.serialization-bindings {{ ""System.Object"" = hyperion }}
+                 
+                akka.suppress-json-serializer-warning = on
+                
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.remote.log-remote-lifecycle-events = DEBUG
+                akka.remote.dot-netty.tcp.hostname = ""localhost""
+                akka.remote.dot-netty.tcp.port = 4053
+                akka.cluster.seed-nodes = [""akka.tcp://demo-system@localhost:4053""] 
+
+           ");
         }
     }
 }

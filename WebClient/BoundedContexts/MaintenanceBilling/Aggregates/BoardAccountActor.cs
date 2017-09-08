@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
@@ -46,15 +45,16 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
 
         public BoardAccountActor()
         {
-            Receive<SimulateBoardingOfAccounts>(client => StartUpHandler(client, client.ClientAccountFilePath, client.ObligationsFilePath));
+            Receive<SimulateBoardingOfAccounts>(client => StartUpHandler(client, client.ClientAccountsFilePath, client.ObligationsFilePath));
         }
 
 
         private void StartUpHandler(SimulateBoardingOfAccounts client, string accountsFilePath, string obligationsFilePath)
         {
+            _log.Info($"Procesing boarding command... ");
             Stopwatch stopwatch = Stopwatch.StartNew();
             stopwatch.Start();
-            int counter = 0;
+            int counter = 1;
             var accounts = GetAccountsForClient(accountsFilePath);
             var obligations = GetObligationsForClient(obligationsFilePath);
             foreach (var account in accounts)
@@ -66,9 +66,9 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                   * so we're not blocking and waiting... but for this demo it's just fine.
                   */
                 TheReferenceToThisActor reference = Sender.Ask<TheReferenceToThisActor>(new SuperviseThisAccount(domainAccount)).Result;
-                if ((counter++ % 100) == 0)
+                if ((++counter % 25) == 0)
                 {
-                    _log.Info($"Boarded {counter} accounts. It's been boarding accounts for {stopwatch.ElapsedMilliseconds / 1000} minutes.");
+                    _log.Info($"Boarded {counter} accounts. It's been boarding accounts for {stopwatch.ElapsedMilliseconds} milliseconds.");
                 }
                 foreach (var obligation in obligations)
                 {
@@ -79,7 +79,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                 }
                 stopwatch.Stop();
 
-                _log.Debug($"Boarded account {account.Key} ... done.");
+                _log.Info($"Boarded account {account.Key} ... done.");
             }
         }
 
@@ -91,7 +91,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
             Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
-                _log.Debug($"Gonna try to open file {obligationsFilePath}");
+                _log.Info($"Gonna try to open file {obligationsFilePath}");
                 if (File.Exists(obligationsFilePath))
                 {
                     string[] readText = File.ReadAllLines(obligationsFilePath);
@@ -101,7 +101,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                         dictionary.Add(line[0], line[1]);
                     }
                 }
-                _log.Debug($"Successfully processing file {obligationsFilePath}");
+                _log.Info($"Successfully processing file {obligationsFilePath}");
             }
             catch (Exception e)
             {
@@ -115,7 +115,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
             Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
-                _log.Debug($"Gonna try to open file {clientsFilePath}");
+                _log.Info($"Gonna try to open file {clientsFilePath}");
                 if (File.Exists(clientsFilePath))
                 {
                     string[] readText = File.ReadAllLines(clientsFilePath);
@@ -125,7 +125,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                         dictionary.Add(line[0], line[1]);
                     }
                 }
-                _log.Debug($"Successfully processing file {clientsFilePath}");
+                _log.Info($"Successfully processing file {clientsFilePath}");
             }
             catch (Exception e)
             {

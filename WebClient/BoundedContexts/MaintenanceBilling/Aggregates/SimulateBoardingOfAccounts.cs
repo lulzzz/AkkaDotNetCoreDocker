@@ -2,12 +2,15 @@
 {
     public class SimulateBoardingOfAccounts
     {
-        public SimulateBoardingOfAccounts(string clientAccountsFilePath, string obligationsFilePath)
+        public SimulateBoardingOfAccounts(string clientName, string clientAccountsFilePath, string obligationsFilePath)
         {
-            ClientAccountFilePath = clientAccountsFilePath;
+            ClientName = clientName;
+            ClientAccountsFilePath = clientAccountsFilePath;
             ObligationsFilePath = obligationsFilePath;
         }
-        public string ClientAccountFilePath { get; private set; }
+
+        public string ClientName { get; private set; }
+        public string ClientAccountsFilePath { get; private set; }
         public string ObligationsFilePath { get; private set; }
     }
 }

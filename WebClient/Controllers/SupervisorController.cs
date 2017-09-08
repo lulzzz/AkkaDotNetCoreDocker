@@ -32,6 +32,8 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 
 using Microsoft.AspNetCore.Mvc;
 using WebClient.ActorManagement;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
+using WebClient.Models;
 
 namespace WebClient.Controllers
 {
@@ -45,7 +47,7 @@ namespace WebClient.Controllers
                 .ActorSystem
                 .ActorSelection($"akka://demo-system/user/demo-supervisor")
                 .Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(5));
-      
+
             var response = new SupervisedAccounts(answer.Message, answer.Accounts);
 
             return response;
@@ -53,7 +55,7 @@ namespace WebClient.Controllers
 
         [HttpGet]
         [Route("api/supervisor/run")]
-        public  SupervisedAccounts StartAccounts()
+        public SupervisedAccounts StartAccounts()
         {
             var answer = ActorSystemRefs
                 .ActorSystem
@@ -64,6 +66,20 @@ namespace WebClient.Controllers
             return response;
         }
 
+        [HttpPost]
+        [Route("api/supervisor/simulation")]
+        public string BoardAccounts([FromBody]SimulateBoardingOfAccountModel client)
+        {
+            var answer = ActorSystemRefs
+                .ActorSystem
+                .ActorSelection($"akka://demo-system/user/demo-supervisor")
+                .Ask<string>(new SimulateBoardingOfAccounts(
+                     client.ClientName,
+                     client.ClientAccountsFilePath,
+                     client.ObligationsFilePath   
+                ), TimeSpan.FromSeconds(5)).Result;
+            return answer;
+        }
 
     }
 }
