@@ -105,7 +105,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
         private AccountStatus AccountStatus { get; }
 
         public string DebugInfo { get; set; }
-
+       
 
     }
 

@@ -11,5 +11,5 @@ RUN dotnet restore
 #Cut the release
 RUN dotnet publish -c Release -o out
 #How to run it
-ENTRYPOINT ["dotnet", "AkkaDotNetCoreDocker/out/WebClient.dll"]
+ENTRYPOINT ["dotnet", "WebClient/out/WebClient.dll"]
 

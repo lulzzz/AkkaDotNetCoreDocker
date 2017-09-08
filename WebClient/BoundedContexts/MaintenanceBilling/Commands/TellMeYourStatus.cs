@@ -1,15 +1,11 @@
-﻿namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
+﻿namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands
 {
     public class TellMeYourStatus
     {
-
-        public string Message { get; }
-        public TellMeYourStatus(){
-            
-        }
-        public TellMeYourStatus(string message)
+        public TellMeYourStatus()
         {
-            Message = message;
+
         }
+
     }
 }

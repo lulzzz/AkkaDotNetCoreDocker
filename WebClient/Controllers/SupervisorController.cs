@@ -24,29 +24,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
+
 using Microsoft.AspNetCore.Mvc;
 using WebClient.ActorManagement;
 
 namespace WebClient.Controllers
 {
-    [Route("api/[controller]")]
     public class SupervisorController : Controller
     {
-
+        [Route("api/supervisor")]
         [HttpGet]
-        public async Task<string> AccountSupervisor()
+        public async Task<SupervisedAccounts> AccountSupervisor()
         {
-            var response = await ActorSystemRefs
+            var answer = await ActorSystemRefs
                 .ActorSystem
                 .ActorSelection($"akka://demo-system/user/demo-supervisor")
-                .Ask<TellMeYourStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(5));
+                .Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(5));
+      
+            var response = new SupervisedAccounts(answer.Message, answer.Accounts);
 
-            return response.Message;
+            return response;
         }
-         
+
+        [HttpGet]
+        [Route("api/supervisor/run")]
+        public  SupervisedAccounts StartAccounts()
+        {
+            var answer = ActorSystemRefs
+                .ActorSystem
+                .ActorSelection($"akka://demo-system/user/demo-supervisor")
+                .Ask<ThisIsMyStatus>(new StartAccounts(), TimeSpan.FromSeconds(30)).Result;
+            var response = new SupervisedAccounts(answer.Message, answer.Accounts);
+
+            return response;
+        }
+
 
     }
 }

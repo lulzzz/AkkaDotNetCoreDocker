@@ -9,6 +9,7 @@
     <Folder Include="BoundedContexts\" />
     <Folder Include="BusinessRuleConfiguration\" />
     <Folder Include="ActorManagement\" />
+    <Folder Include="Models\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +27,12 @@
 
   <ItemGroup>
     <Compile Remove="Modules\HomeModule.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="app.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInPackage>true</IncludeInPackage>
+    </Content>
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

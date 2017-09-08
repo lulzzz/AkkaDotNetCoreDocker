@@ -27,27 +27,54 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using Microsoft.AspNetCore.Mvc;
 using WebClient.ActorManagement;
+using WebClient.Models;
 
 namespace WebClient.Controllers
 {
-    [Route("api/[controller]")]
     public class AccountController : Controller
-    { 
-         
-        [HttpGet("{actorName}")]
-        public async Task<string> Account(string actorName)
+    {
+        [Route("api/account")]
+        [HttpGet]
+        public string Account()
         {
-            var response = await ActorSystemRefs
-                .ActorSystem
-                .ActorSelection($"akka://demo-system/user/demo-supervisor/{actorName}")
-                .Ask<TellMeYourStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(1));
-
-            return response.Message;
+            return "Which account are you looking for?";
         }
 
        
+        [Route("api/account/{actorName}/info")]
+        [HttpGet]
+         public async Task<AccountStateViewModel> AccountDetails(string actorName)
+        {
+            var system = ActorSystemRefs
+                .ActorSystem
+                .ActorSelection($"akka://demo-system/user/demo-supervisor/{actorName}").ResolveOne(TimeSpan.FromSeconds(1));
+            if (system.Exception != null)
+            {
+                return new AccountStateViewModel($"{actorName} is not running at the moment");
+            }
+            var response = await system.Result.Ask<ThisIsMyInfo>(new TellMeYourInfo(), TimeSpan.FromSeconds(1));
+
+            return  new AccountStateViewModel(response.Info);
+        }
+
+        [Route("api/account/{actorName}")]
+        [HttpGet]
+        public async Task<string> Account(string actorName)
+        {
+            var system = ActorSystemRefs
+                .ActorSystem
+                .ActorSelection($"akka://demo-system/user/demo-supervisor/{actorName}").ResolveOne(TimeSpan.FromSeconds(1));
+            if (system.Exception != null)
+            {
+                return $"{actorName} is not running at the moment";
+            }
+            var response = await system.Result.Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(1));
+            return response.Message;
+        }
+
     }
 }

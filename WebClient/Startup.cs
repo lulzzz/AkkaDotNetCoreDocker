@@ -47,9 +47,9 @@ namespace WebClient
             ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", mainConfig);
 
             SystemActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>(), name: "demo-supervisor");
-            SystemActors.AccountSupervisor.Tell(new SuperviorStartUp(
-                clientAccountsFilePath: @"/Users/alfredherr/dev/AkkaDotNetCoreDocker/AkkaDotNetCoreDocker/SampleData/Client-TVAMUVFREY.txt",
-                obligationsFilePath: @"/Users/alfredherr/dev/AkkaDotNetCoreDocker/AkkaDotNetCoreDocker/SampleData/Obligations/Client-TVAMUVFREY.txt"
+            SystemActors.AccountSupervisor.Tell(new SimulateBoardingOfAccounts(
+                clientAccountsFilePath: @"./SampleData/Raintree.txt",
+                obligationsFilePath: @"./SampleData/Obligations/Raintree.txt"
                 ));
             
         }
@@ -66,6 +66,7 @@ namespace WebClient
                 akka.actor.serializers {{ hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""}}
                 akka.actor.serialization-bindings {{ ""System.Object"" = hyperion }}
                  
+                akka.suppress-json-serializer-warning = on
                 akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
                 
                 akka.persistence.journal.sqlite.class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""

@@ -1,6 +1,6 @@
 # Autosave files
 *~
-
+out/
 SampleData/*.txt
 SampleData/Obligations/*.txt
 akka_demo.db
