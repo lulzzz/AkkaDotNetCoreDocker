@@ -121,7 +121,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
         private static Dictionary<string, string> LoadSumulation()
         {
             var range = new Dictionary<string, string>();
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10; i++)
             {
                 RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider();
                 byte[] bytes = new byte[10];

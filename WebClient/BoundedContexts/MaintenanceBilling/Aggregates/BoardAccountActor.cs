@@ -25,70 +25,82 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
+using Akka.Monitoring;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
 {
     /**
       * We are sumulating the boarding of accounts from scratch. 
      */
+
     public class BoardAccountActor : ReceiveActor
     {
         readonly ILoggingAdapter _log = Logging.GetLogger(Context);
+        Dictionary<string, IActorRef> AccountsBeingBoarded = new Dictionary<string, IActorRef>();
+        private Dictionary<string, string> AccountsInFile = new Dictionary<string, string>();
+        private Dictionary<string, string> ObligationsInFile = new Dictionary<string, string>();
 
-
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
+        }
         public BoardAccountActor()
         {
-            Receive<SimulateBoardingOfAccounts>(client => StartUpHandler(client, client.ClientAccountsFilePath, client.ObligationsFilePath));
-        }
+            Receive<SimulateBoardingOfAccounts>(client => this.StartUpHandler(client, client.ClientAccountsFilePath, client.ObligationsFilePath));
+            Receive<SpinUpAccountActor>(msg => this.SpinUpAccountActor(msg.AccountNumber));
 
+            /* Example of custom error handling, also using messages */
+            Receive<FailedToLoadAccounts>(m => Self.Tell(typeof(Stop)));
+            Receive<FailedToLoadObligations>(m => Self.Tell(typeof(Stop)));
+
+        }
 
         private void StartUpHandler(SimulateBoardingOfAccounts client, string accountsFilePath, string obligationsFilePath)
         {
             _log.Info($"Procesing boarding command... ");
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            stopwatch.Start();
-            int counter = 1;
-            var accounts = GetAccountsForClient(accountsFilePath);
-            var obligations = GetObligationsForClient(obligationsFilePath);
-            foreach (var account in accounts)
+
+            GetAccountsForClient(accountsFilePath);
+            GetObligationsForClient(obligationsFilePath);
+
+            foreach (var account in AccountsInFile)
             {
-
-                var domainAccount = new Account(account.Key);
-                /**
-                  * This is best done with a queue at the supervisor perhaps 
-                  * so we're not blocking and waiting... but for this demo it's just fine.
-                  */
-                TheReferenceToThisActor reference = Sender.Ask<TheReferenceToThisActor>(new SuperviseThisAccount(domainAccount)).Result;
-                if ((++counter % 25) == 0)
-                {
-                    _log.Info($"Boarded {counter} accounts. It's been boarding accounts for {stopwatch.ElapsedMilliseconds} milliseconds.");
-                }
-                foreach (var obligation in obligations)
-                {
-                    if (obligation.Value == account.Key)
-                    {
-                        reference.address.Tell(new AddObligationToAccount(account.Key, new Obligation(obligation.Key)));
-                    }
-                }
-                stopwatch.Stop();
-
-                _log.Info($"Boarded account {account.Key} ... done.");
+                Self.Tell(new SpinUpAccountActor(account.Key));
             }
         }
 
+        private void SpinUpAccountActor(string accountNumber)
+        {
+            var props = Props.Create<AccountActor>();
+            var accountActor = Context.ActorOf(props, name: accountNumber);
+            accountActor.Tell(new CreateAccount(accountNumber));
 
+            if (ObligationsInFile.ContainsValue(accountNumber))
+            {
+                foreach (var obligation in ObligationsInFile)
+                {
+                    if (obligation.Value == accountNumber)
+                    {
+                        accountActor.Tell(new AddObligationToAccount(obligation.Value, new Obligation(obligation.Key)));
+                    }
+                }
+            }
+            accountActor.Tell(new AskToBeSupervised(Context.Parent));
+        }
 
         /* Auxiliary methods */
-        public Dictionary<string, string> GetObligationsForClient(string obligationsFilePath)
+        public void GetObligationsForClient(string obligationsFilePath)
         {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
                 _log.Info($"Gonna try to open file {obligationsFilePath}");
@@ -98,7 +110,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                     foreach (var row in readText)
                     {
                         var line = row.Split('\t');
-                        dictionary.Add(line[0], line[1]);
+                        ObligationsInFile.Add(line[0], line[1]);
                     }
                 }
                 _log.Info($"Successfully processing file {obligationsFilePath}");
@@ -107,12 +119,11 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
             {
                 Sender.Tell(new FailedToLoadObligations(e.Message));
             }
-            return dictionary;
+
         }
 
-        private Dictionary<string, string> GetAccountsForClient(string clientsFilePath)
+        private void GetAccountsForClient(string clientsFilePath)
         {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>();
             try
             {
                 _log.Info($"Gonna try to open file {clientsFilePath}");
@@ -122,7 +133,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                     foreach (var row in readText)
                     {
                         var line = row.Split('\t');
-                        dictionary.Add(line[0], line[1]);
+                        AccountsInFile.Add(line[0], line[1]);
                     }
                 }
                 _log.Info($"Successfully processing file {clientsFilePath}");
@@ -131,8 +142,17 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
             {
                 Sender.Tell(new FailedToLoadAccounts(e.Message));
             }
-            return dictionary;
+        }
+    }
+
+
+    internal class SpinUpAccountActor
+    {
+        public SpinUpAccountActor(string accountNumber)
+        {
+            AccountNumber = accountNumber;
         }
 
+        public string AccountNumber { get; private set; }
     }
 }

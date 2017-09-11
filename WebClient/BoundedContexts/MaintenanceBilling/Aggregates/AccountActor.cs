@@ -4,6 +4,7 @@ using Akka.Persistence;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.State;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
+using Akka.Monitoring;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -15,8 +16,18 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         /* This Actor's State */
         AccountState _accountState = new AccountState();
 
+
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
+        }
         public AccountActor()
         {
+            
             /* Hanlde Recovery */
             Recover<SnapshotOffer>(offer => offer.Snapshot is AccountState, offer => ApplySnapShot(offer));
             Recover<AccountCreated>(@event => ApplyPastEvent("AccountCreated", @event));
@@ -35,14 +46,24 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Command<SettleFinancialConcept>(command => ApplyBusinessRules(command));
             Command<AssessFinancialConcept>(command => ApplyBusinessRules(command));
             Command<CancelAccount>(command => ApplyBusinessRules(command));
+            Command<AskToBeSupervised>(command => SendParentMyState(command));
 
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
-            Command<SaveSnapshotSuccess>(success => _log.Debug($"Saved snapshot") /*DeleteMessages(success.Metadata.SequenceNr);*/ );
+            Command<SaveSnapshotSuccess>(success =>  DeleteMessages(success.Metadata.SequenceNr) );
             Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
 
             Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus(message: $"{Self.Path.Name} I am alive!")));
             Command<TellMeYourInfo>(asking => Sender.Tell(new ThisIsMyInfo(info: _accountState)));
 
+        }
+
+        private void SendParentMyState(AskToBeSupervised command)
+        { 
+            /* Assuming this is all we have to load for an account, then we can have the account
+             * send the supervisor to add it to it's list -- then it can terminate. 
+             */
+            command.MyNewParent.Tell(new SuperviseThisAccount(Self.Path.Name));
+            Context.Stop(Self);
         }
 
         private void ApplySnapShot(SnapshotOffer offer)
@@ -124,7 +145,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         /*Example of how snapshotting can be custom to the actor, in this case per 'Account' events*/
         public void ApplySnapShotStrategy()
         {
-            if (this.LastSequenceNr % 5 == 0)
+            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 4 == 0)
             {
                 SaveSnapshot(_accountState);
                 _log.Debug($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");

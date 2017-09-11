@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Akka.Actor;
 using Akka.Configuration;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
 using WebClient.ActorManagement;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
+using System;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
+using Akka.Monitoring;
+using Akka.Monitoring.StatsD;
 
 namespace WebClient
 {
@@ -46,13 +45,16 @@ namespace WebClient
 
             ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", mainConfig);
 
-            SystemActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>(), name: "demo-supervisor");
-            //SystemActors.AccountSupervisor.Tell(new SimulateBoardingOfAccounts(
-                //clientName: "Raintree",
-                //clientAccountsFilePath: @"./SampleData/Raintree.txt",
-                //obligationsFilePath: @"./SampleData/Obligations/Raintree.txt"
-                //));
-            
+            SystemActors.AccountSupervisor =
+                ActorSystemRefs
+                .ActorSystem
+                .ActorOf(Props.Create<AccountActorSupervisor>(), name: "demo-supervisor");
+            ThisIsMyStatus response = SystemActors.AccountSupervisor.Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(3)).Result;
+            var registeredMonitor = ActorMonitoringExtension
+                .RegisterMonitor(ActorSystemRefs.ActorSystem, new ActorStatsDMonitor(host: "localhost",port: 8125, prefix: "akka-demo")); 
+            Console.WriteLine(response.Message);
+         
+
         }
         public static Config getConfiguration()
         {
@@ -94,28 +96,28 @@ namespace WebClient
                 akka.cluster.seed-nodes = [""akka.tcp://demo-system@localhost:4053""] 
 
            ");
-//akka.persistence.journal.plugin = "akka.persistence.journal.postgresql"
-//akka.persistence.journal.postgresql.class = "Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql"
-//akka.persistence.journal.postgresql.plugin-dispatcher = "akka.actor.default-dispatcher"
-//akka.persistence.journal.postgresql.connection-string = "postgresql://localhost/akka_demo"
-//akka.persistence.journal.postgresql.connection-timeout = 30s
-//akka.persistence.journal.postgresql.schema-name = public
-//akka.persistence.journal.postgresql.table-name = event_journal
-//akka.persistence.journal.postgresql.auto-initialize = on
-//akka.persistence.journal.postgresql.timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
-//akka.persistence.journal.postgresql.metadata-table-name = metadata
-//akka.persistence.journal.postgresql.stored-as = BYTEA
+            //akka.persistence.journal.plugin = "akka.persistence.journal.postgresql"
+            //akka.persistence.journal.postgresql.class = "Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql"
+            //akka.persistence.journal.postgresql.plugin-dispatcher = "akka.actor.default-dispatcher"
+            //akka.persistence.journal.postgresql.connection-string = "postgresql://localhost/akka_demo"
+            //akka.persistence.journal.postgresql.connection-timeout = 30s
+            //akka.persistence.journal.postgresql.schema-name = public
+            //akka.persistence.journal.postgresql.table-name = event_journal
+            //akka.persistence.journal.postgresql.auto-initialize = on
+            //akka.persistence.journal.postgresql.timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
+            //akka.persistence.journal.postgresql.metadata-table-name = metadata
+            //akka.persistence.journal.postgresql.stored-as = BYTEA
 
-//akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.postgresql"
-//akka.persistence.snapshot-store.postgresql.class = "Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql"
-//akka.persistence.snapshot-store.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
-//akka.persistence.snapshot-store.postgresql.connection-string = "postgresql://localhost/akka_demo"
-//akka.persistence.snapshot-store.postgresql.connection-timeout = 30s
-//akka.persistence.snapshot-store.postgresql.schema-name = public
-//akka.persistence.snapshot-store.postgresql.table-name = snapshot_store
-//akka.persistence.snapshot-store.postgresql.auto-initialize = on
-//akka.persistence.snapshot-store.postgresql.stored-as = BYTEA
-               
+            //akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.postgresql"
+            //akka.persistence.snapshot-store.postgresql.class = "Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql"
+            //akka.persistence.snapshot-store.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
+            //akka.persistence.snapshot-store.postgresql.connection-string = "postgresql://localhost/akka_demo"
+            //akka.persistence.snapshot-store.postgresql.connection-timeout = 30s
+            //akka.persistence.snapshot-store.postgresql.schema-name = public
+            //akka.persistence.snapshot-store.postgresql.table-name = snapshot_store
+            //akka.persistence.snapshot-store.postgresql.auto-initialize = on
+            //akka.persistence.snapshot-store.postgresql.stored-as = BYTEA
+
         }
     }
 }

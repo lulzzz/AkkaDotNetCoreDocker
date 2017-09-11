@@ -6,6 +6,7 @@ using Akka.Event;
 using Akka.Persistence;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
+using Akka.Monitoring;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -19,48 +20,48 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
          */
         Dictionary<string, IActorRef> _accounts = new Dictionary<string, IActorRef>();
 
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
+        }
+
         public AccountActorSupervisor()
         {
+            
             /*** recovery section **/
-            Recover<SnapshotOffer>(offer =>
-            {
-                _accounts = (Dictionary<string, IActorRef>)offer.Snapshot;
-                _log.Info($"Snapshot recovered.");
-            });
-
-            Recover<AccountAddedToSupervision>(command => ReplayEvent(command.AccountNumber));
-            /*** end recovery section **/
+            Recover<SnapshotOffer>(offer => this.ProcessSnapshot(offer));
+            Recover<AccountAddedToSupervision>(command => this.ReplayEvent(command.AccountNumber));
 
             /** commands **/
-            Command<SimulateBoardingOfAccounts>(client =>
-            {
-                _log.Info($"Boarding client: {client.ClientName}");
-                var boardingActor = Context.ActorOf<BoardAccountActor>(name: $"Client-{client.ClientName}");
-                boardingActor.Tell(client);
-                Sender.Tell($"Started boarding of {client.ClientName} accounts at {DateTime.Now} ");
-
-            });
-
+            Command<SimulateBoardingOfAccounts>(client => RunSimulator(client));
+            Command<SuperviseThisAccount>(command => ProcessSupervision(command));
+            Command<StartAccounts>(command => this.StartAccounts());
+            Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus($"I have {_accounts.Count} accounts.", new Dictionary<string, string>())));
+            Command<AboutMe>(me => Console.WriteLine($"About me: {me.Me}"));
             Command<string>(NoMessage => { });
 
-            Command<SuperviseThisAccount>(command => ProcessSupervision(command));
+            /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
+            Command<SaveSnapshotSuccess>(success => DeleteMessages(success.Metadata.SequenceNr));
+            Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
 
-            Command<StartAccounts>(command =>
-            {
-                StartAccounts();
-                Sender.Tell(new ThisIsMyStatus($"{_accounts.Count} accounts started.", DictionaryToStringList())); ;
-            });
+        }
 
-            Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus($"I have {_accounts.Count} accounts.", DictionaryToStringList())));
+        private void ProcessSnapshot(SnapshotOffer offer)
+        {
+            _accounts = (Dictionary<string, IActorRef>)offer.Snapshot;
+            _log.Info($"Snapshot recovered.");
+        }
 
-            Command<AboutMe>(me => Console.WriteLine($"About me: {me.Me}"));
-
-            /* Example of custom error handling, also using messages */
-            Command<FailedToLoadAccounts>(m => Self.Tell(typeof(Stop)));
-            Command<FailedToLoadObligations>(m => Self.Tell(typeof(Stop)));
-
-            /** end commands **/
-
+        private void RunSimulator(SimulateBoardingOfAccounts client)
+        {
+            _log.Info($"Boarding client: {client.ClientName}");
+            var boardingActor = Context.ActorOf<BoardAccountActor>(name: $"Client-{client.ClientName}");
+            boardingActor.Tell(client);
+            Sender.Tell($"Started boarding of {client.ClientName} accounts at {DateTime.Now} ");
         }
 
         private Dictionary<string, string> DictionaryToStringList()
@@ -70,7 +71,6 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             {
                 viewble.Add(a.Key, a.Value?.ToString() ?? "Not Instantiated");
             }
-
             return viewble;
         }
 
@@ -89,31 +89,32 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                     _log.Debug($"skipped account {account}, already instantiated.");
                 }
             }
-
+            Sender.Tell(new ThisIsMyStatus($"{_accounts.Count} accounts started.", DictionaryToStringList())); ;
         }
 
         private void ProcessSupervision(SuperviseThisAccount command)
         {
-            if (!_accounts.ContainsKey(command.Account.AccountNumber))
+            if (!_accounts.ContainsKey(command.AccountNumber))
             {
-                AccountAddedToSupervision @event = AddThisAccountToState(command.Account.AccountNumber);
+                AccountAddedToSupervision @event = AddThisAccountToState(command.AccountNumber);
                 Persist(@event, s =>
                 {
-                    var address = InstantiateThisAccount(command.Account.AccountNumber);
-                    Sender.Tell(new TheReferenceToThisActor(address));
+                    var address = InstantiateThisAccount(command.AccountNumber);
+
                 });
                 ApplySnapShotStrategy();
             }
             else
             {
-                _log.Info($"You tried to load account {command.Account.AccountNumber} which has already been loaded");
+                _log.Info($"You tried to load account {command.AccountNumber} which has already been loaded");
             }
         }
+      
         private void ReplayEvent(string accountNumber)
         {
             if (_accounts.ContainsKey(accountNumber))
             {
-                _log.Info($"Supervisor already has {accountNumber} in state, why are you adding it again?");
+                _log.Info($"Supervisor already has {accountNumber} in state. No action taken");
             }
             else
             {
@@ -121,6 +122,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 _log.Info($"Replayed event on {accountNumber}");
             }
         }
+      
         private AccountAddedToSupervision AddThisAccountToState(string accountNumber)
         {
             if (!_accounts.ContainsKey(accountNumber))
@@ -131,6 +133,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             }
             return null;
         }
+      
         private IActorRef InstantiateThisAccount(string accountNumber)
         {
             if (_accounts.ContainsKey(accountNumber))
@@ -145,11 +148,12 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 throw new Exception($"Why are you trying to instantiate an account not yet registered?");
             }
         }
+      
         public void ApplySnapShotStrategy()
         {
-            if (this.LastSequenceNr % 1000 == 0)
+            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 1000 == 0)
             {
-                var state = new Dictionary<string, IActorRef>();
+                var state = new Dictionary<string, IActorRef>(); // immutable, remember?
                 foreach (var record in _accounts.Keys)
                 {
                     state.Add(record, null);
@@ -163,7 +167,6 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
     public class TheReferenceToThisActor
     {
         public IActorRef address { get; }
-
         public TheReferenceToThisActor(IActorRef address)
         {
             this.address = address;
