@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Persistence;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
@@ -20,18 +19,8 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
          */
         Dictionary<string, IActorRef> _accounts = new Dictionary<string, IActorRef>();
 
-        protected override void PostStop()
-        {
-            Context.IncrementActorStopped();
-        }
-        protected override void PreStart()
-        {
-            Context.IncrementActorCreated();
-        }
-
         public AccountActorSupervisor()
         {
-            
             /*** recovery section **/
             Recover<SnapshotOffer>(offer => this.ProcessSnapshot(offer));
             Recover<AccountAddedToSupervision>(command => this.ReplayEvent(command.AccountNumber));
@@ -47,18 +36,34 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
             Command<SaveSnapshotSuccess>(success => DeleteMessages(success.Metadata.SequenceNr));
             Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
+            Command<DeleteMessagesSuccess>(msg => _log.Info($"Successfully cleared log after snapshot ({msg.ToString()})"));
+            CommandAny(msg => _log.Error($"Unhandled message in {Self.Path.Name}. Message:{msg.ToString()}"));
 
+        }
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
+        }
+        private void Monitor(){
+            Context.IncrementMessagesReceived();
         }
 
         private void ProcessSnapshot(SnapshotOffer offer)
         {
+            this.Monitor();
             _accounts = (Dictionary<string, IActorRef>)offer.Snapshot;
             _log.Info($"Snapshot recovered.");
         }
 
         private void RunSimulator(SimulateBoardingOfAccounts client)
         {
+            this.Monitor();
             _log.Info($"Boarding client: {client.ClientName}");
+
             var boardingActor = Context.ActorOf<BoardAccountActor>(name: $"Client-{client.ClientName}");
             boardingActor.Tell(client);
             Sender.Tell($"Started boarding of {client.ClientName} accounts at {DateTime.Now} ");
@@ -76,6 +81,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void StartAccounts()
         {
+            this.Monitor();
             var accounts = new List<string>(_accounts.Keys);
             foreach (var account in accounts)
             {
@@ -94,6 +100,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void ProcessSupervision(SuperviseThisAccount command)
         {
+            this.Monitor();
             if (!_accounts.ContainsKey(command.AccountNumber))
             {
                 AccountAddedToSupervision @event = AddThisAccountToState(command.AccountNumber);
@@ -138,7 +145,8 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         {
             if (_accounts.ContainsKey(accountNumber))
             {
-                var accountActor = Context.ActorOf<AccountActor>(name: accountNumber);
+                
+                var accountActor = Context.ActorOf(Props.Create<AccountActor>(), name: accountNumber);
                 _accounts[accountNumber] = accountActor;
                 _log.Debug($"Instantiated account {accountActor.Path.Name}");
                 return accountActor;
@@ -160,6 +168,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 }
                 SaveSnapshot(state);
                 _log.Info($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");
+                Context.IncrementCounter("SnapShotTaken");
             }
         }
     }

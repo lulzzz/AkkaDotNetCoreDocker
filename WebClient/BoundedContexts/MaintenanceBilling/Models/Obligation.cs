@@ -37,6 +37,11 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models
         {
             return Buckets.SetItem(occurred.FinancialConcept, occurred.TransactionAmount);
         }
+        public Obligation SetStatus(ObligationStatus status){
+            this.Status = status;
+            return this;
+        }
+        public ObligationStatus Status { get; private set; }
         private ImmutableDictionary<Guid, FinancialTransaction> Transactions { get; set; }
         private ImmutableDictionary<FinancialConcept, double> Buckets { get; set; }
         public string ObligationNumber { get; private set; }

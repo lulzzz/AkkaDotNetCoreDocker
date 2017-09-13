@@ -5,7 +5,7 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
 {
-    public class AccountBalanceMustNotBeNegative : IBusinessRule
+    public class AccountBalanceMustNotBeNegative : IAccountBusinessRule
     {
         private AccountState accountState;
         private List<IEvent> eventsGenerated;
@@ -16,7 +16,6 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
         public AccountBalanceMustNotBeNegative(AccountState accountState)
         {
             this.accountState = accountState;
-
         }
 
         public string GetResultDetails()

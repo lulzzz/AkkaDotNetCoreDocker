@@ -2,11 +2,11 @@
 {
     public enum FinancialConcept
     {
-        Dues,
-        Tax,
-        Reserve,
-        Principal,
-        Interest
+        Dues = 0,
+        Tax = 1,
+        Reserve = 2,
+        Principal = 3,
+        Interest = 4
 
     }
 }

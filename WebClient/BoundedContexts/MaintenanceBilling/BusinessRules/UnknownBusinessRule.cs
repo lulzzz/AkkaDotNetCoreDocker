@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
+namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
 {
     internal class UnknownBusinessRule : Exception
     {

@@ -8,9 +8,9 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
     public class FinancialConceptNotSettled : IEvent
     {
         private readonly IDomainCommand RejectedCommand;
-        private readonly IBusinessRule BusinessRuleWouldBeViolated;
+        private readonly IAccountBusinessRule BusinessRuleWouldBeViolated;
 
-        public FinancialConceptNotSettled(IDomainCommand rejectedCommand, IBusinessRule rule) : this()
+        public FinancialConceptNotSettled(IDomainCommand rejectedCommand, IAccountBusinessRule rule) : this()
         {
             this.RejectedCommand = rejectedCommand;
             this.BusinessRuleWouldBeViolated = rule;

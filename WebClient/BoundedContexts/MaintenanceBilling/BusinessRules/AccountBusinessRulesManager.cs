@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.State;
-using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 
-namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
+namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
 {
-    public class RulesApplicator 
+    public class AccountBusinessRulesManager 
     {
          
         public static BusinessRuleApplicationResult ApplyBusinessRules(AccountState accountState, IDomainCommand comnd)
@@ -29,6 +28,21 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                             return result; //we stop processing any further rules.
                         }
 						break;
+                    case AnObligationMustBeActiveForBilling rule:
+                        rule.RunRule();
+                        if (rule.Success)
+                        {
+                            result.RuleProcessedResults.Add(rule, $"Business Rule Applied. {rule.GetResultDetails()}");
+                            rule.GetGeneratedEvents().ForEach(@event => result.GeneratedEvents.Add(@event));
+                            result.GeneratedState = rule.GetGeneratedState();
+                        }
+                        else
+                        {
+                            result.Success = false;
+                            result.RuleProcessedResults.Add(rule, $"Business Rule Failed Application. {rule.GetResultDetails()}");
+                            return result; //we stop processing any further rules.
+                        }
+                        break;
 					default:
 						throw new UnknownBusinessRule();
 				}
@@ -41,13 +55,20 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             return result;
         }
 
-        public static List<IBusinessRule> GetBusinessRulesToApply(AccountState accountState, IDomainCommand @command)
+        public static List<IAccountBusinessRule> GetBusinessRulesToApply(AccountState accountState, IDomainCommand @command)
         {
             //When Event is a SettleFinancialConcept?orWhatever command
             // get the rules to apply to this account for this particular command
             // and the order in which they need to be applied
-            var list= new List<IBusinessRule>();
-            list.Add(new AccountBalanceMustNotBeNegative(accountState));
+            var list = new List<IAccountBusinessRule>
+            {
+                new AccountBalanceMustNotBeNegative(accountState)
+            };
+
+            if(@command is BillingAssessment cmd){
+                list.Add(new AnObligationMustBeActiveForBilling(accountState,cmd.LineItems));
+            }
+
             return list;
         }
 

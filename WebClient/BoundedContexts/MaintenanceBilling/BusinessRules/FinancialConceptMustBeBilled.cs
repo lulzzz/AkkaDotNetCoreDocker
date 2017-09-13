@@ -6,7 +6,7 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
-    public class FinancialConceptMustBeBilled : IBusinessRule
+    public class FinancialConceptMustBeBilled : IAccountBusinessRule
     {
         public FinancialConceptMustBeBilled(){
             

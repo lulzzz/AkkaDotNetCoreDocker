@@ -70,7 +70,29 @@ namespace WebClient
                 akka.actor.serialization-bindings {{ ""System.Object"" = hyperion }}
                  
                 akka.suppress-json-serializer-warning = on
-                                
+                       
+                ## Postgresql         
+                #akka.persistence.journal.plugin = ""akka.persistence.journal.postgresql""
+                #akka.persistence.journal.postgresql.class = ""Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql""
+                #akka.persistence.journal.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
+                #akka.persistence.journal.postgresql.connection-timeout = 30s
+                #akka.persistence.journal.postgresql.table-name = event_journal
+                #akka.persistence.journal.postgresql.metadata-table-name = journal_metadata
+                #akka.persistence.journal.postgresql.auto-initialize = on
+                #akka.persistence.journal.postgresql.timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
+                #akka.persistence.journal.postgresql.connection-string = ""host=localhost port=5432 dbname=akka_demo user=postgres password:akka_demo""
+                #akka.persistence.journal.postgresql.stored-as = JSON                
+
+                #akka.persistence.snapshot-store.pugin = ""akka.persistence.snapshot-store.postgresql""
+                #akka.persistence.snapshot-store.postgresql.class =""Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql""                
+                #akka.persistence.snapshot-store.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
+                #akka.persistence.snapshot-store.postgresql.connection-string = ""host=localhost port=5432 dbname=akka_demo user=postgres password:akka_demo""
+                #akka.persistence.snapshot-store.postgresql.connection-timeout = 30s
+                #akka.persistence.snapshot-store.postgresql.table-name = snapshot_store
+                #akka.persistence.snapshot-store.postgresql.auto-initialize = on
+                #akka.persistence.snapshot-store.postgresql.stored-as = JSON
+
+                ## SqLite
                 akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
                 akka.persistence.journal.sqlite.class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                 akka.persistence.journal.sqlite.plugin-dispatcher = ""akka.actor.default-dispatcher""
@@ -81,8 +103,8 @@ namespace WebClient
                 akka.persistence.journal.sqlite.timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
                 akka.persistence.journal.sqlite.connection-string = ""Data Source=/Users/alfredherr/dev/AkkaDotNetCoreDocker/AkkaDotNetCoreDocker/akka_demo.db""
 
-                akka.persistence.snapshot-store.sqlite.connection-string = ""Data Source=/Users/alfredherr/dev/AkkaDotNetCoreDocker/AkkaDotNetCoreDocker/akka_demo.db""
                 akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sqlite""
+                akka.persistence.snapshot-store.sqlite.connection-string = ""Data Source=/Users/alfredherr/dev/AkkaDotNetCoreDocker/AkkaDotNetCoreDocker/akka_demo.db""
                 akka.persistence.snapshot-store.sqlite.class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
                 akka.persistence.snapshot-store.sqlite.plugin-dispatcher = ""akka.actor.default-dispatcher""
                 akka.persistence.snapshot-store.sqlite.connection-timeout = 30s

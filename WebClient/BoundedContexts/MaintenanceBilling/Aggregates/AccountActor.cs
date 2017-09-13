@@ -5,6 +5,8 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.State;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
 using Akka.Monitoring;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules;
+
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -16,18 +18,8 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         /* This Actor's State */
         AccountState _accountState = new AccountState();
 
-
-        protected override void PostStop()
-        {
-            Context.IncrementActorStopped();
-        }
-        protected override void PreStart()
-        {
-            Context.IncrementActorCreated();
-        }
         public AccountActor()
-        {
-            
+        {  
             /* Hanlde Recovery */
             Recover<SnapshotOffer>(offer => offer.Snapshot is AccountState, offer => ApplySnapShot(offer));
             Recover<AccountCreated>(@event => ApplyPastEvent("AccountCreated", @event));
@@ -45,20 +37,38 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             /* Example of running comannds through business rules */
             Command<SettleFinancialConcept>(command => ApplyBusinessRules(command));
             Command<AssessFinancialConcept>(command => ApplyBusinessRules(command));
+            Command<BillingAssessment>(command => ProcessBilling(command));
             Command<CancelAccount>(command => ApplyBusinessRules(command));
             Command<AskToBeSupervised>(command => SendParentMyState(command));
 
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
             Command<SaveSnapshotSuccess>(success =>  DeleteMessages(success.Metadata.SequenceNr) );
             Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
-
+            //Command<RecoverySuccess>(msg => this.WakeUp());
             Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus(message: $"{Self.Path.Name} I am alive!")));
             Command<TellMeYourInfo>(asking => Sender.Tell(new ThisIsMyInfo(info: _accountState)));
+            CommandAny(msg => _log.Error($"Unhandled message in {Self.Path.Name}. Message:{msg.ToString()}"));
 
         }
 
+        private void ProcessBilling(BillingAssessment command)
+        {
+            
+            ApplyBusinessRules(command);
+          
+            Sender.Tell(new ThisIsMyStatus($"Your billing request has been submited to occount {_accountState.AccountNumber}. The new account state is: {_accountState}"));
+        }
+
+
+        /*private void WakeUp()
+        {
+            var Mommy = Context.ActorSelection($"/user/demo-supervisor-{_accountState.Portfolio}").ResolveOne(TimeSpan.FromSeconds(10)).Result;
+            Mommy.Tell(new SuperviseThisAccount(_accountState.AccountNumber));
+        }*/
+
         private void SendParentMyState(AskToBeSupervised command)
-        { 
+        {
+            this.Monitor();
             /* Assuming this is all we have to load for an account, then we can have the account
              * send the supervisor to add it to it's list -- then it can terminate. 
              */
@@ -80,6 +90,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void AddObligation(AddObligationToAccount command)
         {
+            this.Monitor();
             if (!_accountState.Obligations.ContainsKey(command.Obligation.ObligationNumber))
             {
                 var @event = new ObligationAddedToAccount(command.AccountNumber, command.Obligation);
@@ -99,6 +110,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void InitiateAccount(CreateAccount command)
         {
+            this.Monitor();
             if (_accountState.AccountNumber == null)
             {
                 /**
@@ -120,12 +132,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void ApplyBusinessRules(IDomainCommand command)
         {
+            this.Monitor();
             /**
 			 * Here we can call Business Rules to validate and do whatever.
 			 * Then, based on the outcome generated events.
 			 * In this example, we are simply going to accept it and updated our state.
 			 */
-            var result = RulesApplicator.ApplyBusinessRules(_accountState, command);
+            var result = AccountBusinessRulesManager.ApplyBusinessRules(_accountState, command);
             if (result.Success)
             {
                 /* I may want to do old vs new state comparisons for other reasons
@@ -150,6 +163,18 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
                 SaveSnapshot(_accountState);
                 _log.Debug($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");
             }
+        }
+        private void Monitor()
+        {
+            Context.IncrementMessagesReceived();
+        }
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
         }
     }
 }

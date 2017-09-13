@@ -32,6 +32,8 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using Microsoft.AspNetCore.Mvc;
 using WebClient.ActorManagement;
 using WebClient.Models;
+using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
+using System.Collections.Immutable;
 
 namespace WebClient.Controllers
 {
@@ -44,10 +46,10 @@ namespace WebClient.Controllers
             return "Which account are you looking for?";
         }
 
-       
+
         [Route("api/account/{actorName}/info")]
         [HttpGet]
-         public async Task<AccountStateViewModel> AccountDetails(string actorName)
+        public async Task<AccountStateViewModel> AccountDetails(string actorName)
         {
             var system = ActorSystemRefs
                 .ActorSystem
@@ -58,7 +60,7 @@ namespace WebClient.Controllers
             }
             var response = await system.Result.Ask<ThisIsMyInfo>(new TellMeYourInfo(), TimeSpan.FromSeconds(1));
 
-            return  new AccountStateViewModel(response.Info);
+            return new AccountStateViewModel(response.Info);
         }
 
         [Route("api/account/{actorName}")]
@@ -76,5 +78,29 @@ namespace WebClient.Controllers
             return response.Message;
         }
 
+        [Route("api/account/{actorName}/assessment")]
+        [HttpGet]
+        public InvoiceLineItem GetInvoiceLineItem(string actorName)
+        {
+            return new InvoiceLineItem(FinancialConcept.Tax,0,0,0);
+        }
+
+        [Route("api/account/{actorName}/assessment")]
+        [HttpPost]
+        public async Task<string> AccountPayment( string actorName,[FromBody]SimulateAssessmentModel Assessment)
+        {
+            var system = ActorSystemRefs
+                .ActorSystem
+                .ActorSelection($"akka://demo-system/user/demo-supervisor/{actorName}").ResolveOne(TimeSpan.FromSeconds(10));
+            if (system.Exception != null)
+            {
+                return $"{actorName} is not running at the moment";
+            }
+            ImmutableList<InvoiceLineItem> items = ImmutableList.Create<InvoiceLineItem>(Assessment.LineItems.ToArray());
+
+            var domanCommand = new BillingAssessment(actorName, items);
+            var response = await system.Result.Ask<ThisIsMyStatus>(domanCommand, TimeSpan.FromSeconds(10));
+            return response.Message;
+        }
     }
 }

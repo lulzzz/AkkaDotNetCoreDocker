@@ -4,7 +4,7 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
 {
-    public interface IBusinessRule
+    public interface IAccountBusinessRule
     {
         /**
          * Rule logic gets handled in this method.

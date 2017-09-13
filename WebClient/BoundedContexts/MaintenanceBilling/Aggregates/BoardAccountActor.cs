@@ -33,6 +33,7 @@ using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Commands;
 using AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models;
 using Akka.Monitoring;
+using System.Collections.Immutable;
 
 namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
 {
@@ -47,47 +48,58 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
         private Dictionary<string, string> AccountsInFile = new Dictionary<string, string>();
         private Dictionary<string, string> ObligationsInFile = new Dictionary<string, string>();
 
-        protected override void PostStop()
-        {
-            Context.IncrementActorStopped();
-        }
-        protected override void PreStart()
-        {
-            Context.IncrementActorCreated();
-        }
         public BoardAccountActor()
         {
             Receive<SimulateBoardingOfAccounts>(client => this.StartUpHandler(client, client.ClientAccountsFilePath, client.ObligationsFilePath));
-            Receive<SpinUpAccountActor>(msg => this.SpinUpAccountActor(msg.AccountNumber));
+            Receive<SpinUpAccountActor>(msg => this.SpinUpAccountActor(msg.AccountNumber, msg.Obligations, msg.Supervisor));
 
             /* Example of custom error handling, also using messages */
             Receive<FailedToLoadAccounts>(m => Self.Tell(typeof(Stop)));
             Receive<FailedToLoadObligations>(m => Self.Tell(typeof(Stop)));
-
+            ReceiveAny(msg => _log.Error($"Unhandled message in {Self.Path.Name}. Message:{msg.ToString()}"));
         }
 
         private void StartUpHandler(SimulateBoardingOfAccounts client, string accountsFilePath, string obligationsFilePath)
         {
+            var supervisor = Sender;
+            this.Monitor();
+            int counter = 0;
             _log.Info($"Procesing boarding command... ");
 
             GetAccountsForClient(accountsFilePath);
             GetObligationsForClient(obligationsFilePath);
 
+            var props = new Akka.Routing.RoundRobinPool(200).Props(Props.Create<BoardAccountActor>());
+            var router = Context.ActorOf(props, name: $"Client-{client.ClientName}-router");
+
             foreach (var account in AccountsInFile)
             {
-                Self.Tell(new SpinUpAccountActor(account.Key));
+                ImmutableDictionary<string, string> obligations = ImmutableDictionary.Create<string, string>();
+                foreach (var item in this.ObligationsInFile)
+                {
+                    if (item.Value == account.Key)
+                    {
+                        obligations = obligations.Add(item.Key, item.Value);
+                    }
+                }
+                if (++counter % 1000 == 0)
+                {
+                    _log.Info($"({counter}) Telling router {router.Path.Name} to spin up account {account.Key}... ");
+                }
+                router.Tell(new SpinUpAccountActor(account.Key, obligations.ToImmutableDictionary(),supervisor));
             }
         }
 
-        private void SpinUpAccountActor(string accountNumber)
+        private void SpinUpAccountActor(string accountNumber, ImmutableDictionary<string, string> obligations,IActorRef supervisor)
         {
+            this.Monitor();
             var props = Props.Create<AccountActor>();
             var accountActor = Context.ActorOf(props, name: accountNumber);
             accountActor.Tell(new CreateAccount(accountNumber));
 
-            if (ObligationsInFile.ContainsValue(accountNumber))
+            if (obligations.ContainsValue(accountNumber))
             {
-                foreach (var obligation in ObligationsInFile)
+                foreach (var obligation in obligations)
                 {
                     if (obligation.Value == accountNumber)
                     {
@@ -95,7 +107,8 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                     }
                 }
             }
-            accountActor.Tell(new AskToBeSupervised(Context.Parent));
+            accountActor.Tell(new AskToBeSupervised(supervisor));
+
         }
 
         /* Auxiliary methods */
@@ -143,16 +156,33 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                 Sender.Tell(new FailedToLoadAccounts(e.Message));
             }
         }
+        private void Monitor()
+        {
+            Context.IncrementMessagesReceived();
+        }
+        protected override void PostStop()
+        {
+            Context.IncrementActorStopped();
+        }
+        protected override void PreStart()
+        {
+            Context.IncrementActorCreated();
+        }
     }
 
 
     internal class SpinUpAccountActor
     {
-        public SpinUpAccountActor(string accountNumber)
+        public SpinUpAccountActor(string accountNumber, ImmutableDictionary<string, string> oligations,IActorRef supervisor)
         {
             AccountNumber = accountNumber;
+            Obligations = ImmutableDictionary.Create<string, string>();
+            Obligations = oligations.ToImmutableDictionary();
+            Supervisor = supervisor;
         }
 
         public string AccountNumber { get; private set; }
+        public ImmutableDictionary<string, string> Obligations { get; private set; }
+        public IActorRef Supervisor { get; private set; }
     }
 }
