@@ -1,4 +1,11 @@
 # AkkaDotNetCoreDocker
+This is a POC of Akka.net on .Net Core deployed on Docker.  
+
+The goals of this POC are as follows:
++ Determine viability of modeling a financial servicing domain using actors to hold state instead of using a database.
++ Determine the viability of using Akka.Net in a production-like environment.
++ Identify challenges of using Event Sourcing to model state transitions.
+
 
 ## Running It
 ```bash
@@ -15,7 +22,7 @@ or just run:
 runMonitoring.sh
 ```
 
-# Generating Sample Accounts
+## Generating Sample Accounts
 ```bash
 cd SampleData
 ./GenerateSampleData.pl ####
