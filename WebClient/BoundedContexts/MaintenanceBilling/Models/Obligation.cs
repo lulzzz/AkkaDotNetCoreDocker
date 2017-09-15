@@ -17,8 +17,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Models
         public Obligation(string obligationNumber) : this()
         {
             this.ObligationNumber = obligationNumber;
+            this.Status = ObligationStatus.Active;
         }
-
+        public Obligation(string obligationNumber,ObligationStatus status) : this()
+        {
+            this.ObligationNumber = obligationNumber;
+            this.Status = status;
+        }
         public ImmutableDictionary<FinancialConcept, double> PostTransaction(FinancialTransaction occurred)
         {
             this.Transactions.Add(new Guid(), occurred);

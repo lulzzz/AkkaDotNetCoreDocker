@@ -33,8 +33,8 @@ namespace WebClient.Models
     {
         public AccountStateViewModel(string message)
         {
-            AccountState = new AccountState();
             Message = message;
+            AccountState = new AccountState();
         }
 
         public AccountStateViewModel(AccountState accountState)

@@ -19,11 +19,12 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
         AccountState _accountState = new AccountState();
 
         public AccountActor()
-        {  
+        {
             /* Hanlde Recovery */
             Recover<SnapshotOffer>(offer => offer.Snapshot is AccountState, offer => ApplySnapShot(offer));
             Recover<AccountCreated>(@event => ApplyPastEvent("AccountCreated", @event));
             Recover<ObligationAddedToAccount>(@event => ApplyPastEvent("ObligationAddedToAccount", @event));
+            Recover<ObligationAssessedConcept>(@event => ApplyPastEvent("ObligationAddedToAccount", @event));
             Recover<SuperSimpleSuperCoolEventFoundByRules>(@event => ApplyPastEvent("SuperSimpleSuperCoolEventFoundByRules", @event));
 
             /**
@@ -42,20 +43,21 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
             Command<AskToBeSupervised>(command => SendParentMyState(command));
 
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
-            Command<SaveSnapshotSuccess>(success =>  DeleteMessages(success.Metadata.SequenceNr) );
+            Command<SaveSnapshotSuccess>(success => DeleteMessages(success.Metadata.SequenceNr));
             Command<SaveSnapshotFailure>(failure => _log.Error($"Actor {Self.Path.Name} was unable to save a snapshot. {failure.Cause.Message}"));
             //Command<RecoverySuccess>(msg => this.WakeUp());
             Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus(message: $"{Self.Path.Name} I am alive!")));
             Command<TellMeYourInfo>(asking => Sender.Tell(new ThisIsMyInfo(info: _accountState)));
+            Command<DeleteMessagesSuccess>(msg => _log.Info($"Successfully cleared log after snapshot ({msg.ToString()})"));
             CommandAny(msg => _log.Error($"Unhandled message in {Self.Path.Name}. Message:{msg.ToString()}"));
 
         }
 
         private void ProcessBilling(BillingAssessment command)
         {
-            
+
             ApplyBusinessRules(command);
-          
+
             Sender.Tell(new ThisIsMyStatus($"Your billing request has been submited to occount {_accountState.AccountNumber}. The new account state is: {_accountState}"));
         }
 
@@ -139,26 +141,30 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
 			 * In this example, we are simply going to accept it and updated our state.
 			 */
             var result = AccountBusinessRulesManager.ApplyBusinessRules(_accountState, command);
+            _log.Info($"There were {result.GeneratedEvents.Count} events for {command.ToString()} command. And it was {result.Success}");
+            _log.Info($"And it returned {result.Success}");
             if (result.Success)
             {
                 /* I may want to do old vs new state comparisons for other reasons
 				 *  but ultimately we just update the state.. */
-                result.GeneratedEvents.ForEach(@event =>
+                var events = result.GeneratedEvents;
+                foreach (var @event in events)
                 {
+                    _log.Info($"Event: {@event.ToString()}");
                     Persist(@event, s =>
                     {
                         _accountState = _accountState.Event(@event);
                         ApplySnapShotStrategy();
-                        _log.Debug($"Processing event {@event.ToString()} from business rules for command {command.ToString()}");
+                        _log.Info($"Processing event {@event.ToString()} from business rules for command {command.ToString()}");
                     });
-                });
+                }
             }
         }
 
         /*Example of how snapshotting can be custom to the actor, in this case per 'Account' events*/
         public void ApplySnapShotStrategy()
         {
-            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 4 == 0)
+            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 100 == 0)
             {
                 SaveSnapshot(_accountState);
                 _log.Debug($"Snapshot taken. LastSequenceNr is {this.LastSequenceNr}.");

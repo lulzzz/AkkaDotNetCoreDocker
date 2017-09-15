@@ -12,8 +12,9 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
          */
         public AccountState()
         {
-            Obligations = ImmutableDictionary.Create<string, Obligation>();
+            this.Obligations = ImmutableDictionary.Create<string, Obligation>();
             this.SimulatedFields = ImmutableDictionary.Create<string, string>();
+            this.AuditLog = ImmutableList.Create<StateLog>();
         }
 
         public AccountState(string accountNumber) : this()
@@ -28,11 +29,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
          * 
         */
         private AccountState(string accountNumber,
-                             ImmutableDictionary<string, string> simulation)
+                             ImmutableDictionary<string, string> simulation,
+                            ImmutableList<StateLog> log)
         {
+            this.SimulatedFields = simulation;
             this.AccountNumber = accountNumber;
-            Obligations = ImmutableDictionary.Create<string, Obligation>();
-            this.SimulatedFields = ImmutableDictionary.Create<string, string>();
+            this.AuditLog = log;
+            this.Obligations = ImmutableDictionary.Create<string, Obligation>();
         }
 
         private AccountState(string accountNumber, double currentBalance,
@@ -50,13 +53,13 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
                              AccountStatus accountStatus,
                              ImmutableDictionary<string, Obligation> obligations,
                              ImmutableDictionary<string, string> simulation,
-                             string debugInfo)
+                             ImmutableList<StateLog> log)
         {
             AccountNumber = accountNumber;
             CurrentBalance = currentBalance;
             accountStatus = AccountStatus;
             Obligations = obligations;
-            DebugInfo = debugInfo;
+            AuditLog = log;
             SimulatedFields = simulation;
         }
         /**
@@ -64,13 +67,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
          * The Event() handler is responsible for always returning a new state
          * 
          */
-        public AccountState Event(SomeOneSaidHiToMe occurred)
-        {
-            return new AccountState(this.AccountNumber, this.CurrentBalance,
-                                    this.AccountStatus, this.Obligations,
-                                    LoadSumulation().ToImmutableDictionary(),
-                                    $"{this.DebugInfo}|{occurred.DebugInfo}");
-        }
+
         public AccountState Event(IEvent @event)
         {
             switch (@event)
@@ -91,57 +88,26 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
                     return this.Event(occurred);
                 case SuperSimpleSuperCoolEventFoundByRules occurred:
                     return this.Event(occurred);
-                case ObligationUsedForBilling occurred:
-                    return this.Event(occurred);
-                
+
                 default:
                     throw new UnknownAccountEvent($"{@event.GetType()}");
             }
         }
-     
-        public AccountState Event(ObligationUsedForBilling occurred)
+
+        public AccountState Event(SomeOneSaidHiToMe occurred)
         {
             return new AccountState(this.AccountNumber, this.CurrentBalance,
                                     this.AccountStatus, this.Obligations,
-                                    LoadSumulation(SimulatedFields, "1", $"{occurred.ObligationNumber}: {occurred.Message}"),
-                                    "Processed ObligationUsedForBilling event");
-
+                                    LoadSimulation().ToImmutableDictionary(),
+                                    AuditLog.Add(new StateLog("SomeOneSaidHiToMe", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
+
         public AccountState Event(SuperSimpleSuperCoolEventFoundByRules occurred)
         {
             return new AccountState(this.AccountNumber, this.CurrentBalance,
                                     this.AccountStatus, this.Obligations,
-                                    LoadSumulation(SimulatedFields, "2", "My state has been updated, see..."),
-                                    "Processed dummy SuperSimpleSuperCoolEventFoundByRules");
-
-        }
-        public AccountState Event(AccountCurrentBalanceUpdated occurred)
-        {
-            return new AccountState(this.AccountNumber, occurred.CurrentBalance,
-                                    this.AccountStatus, this.Obligations,
-                                    SimulatedFields);
-        }
-
-        public AccountState Event(AccountStatusChanged occurred)
-        {
-            return new AccountState(this.AccountNumber, this.CurrentBalance,
-                                    occurred.AccountStatus, this.Obligations,
-                                    SimulatedFields);
-        }
-
-        public AccountState Event(AccountCancelled occurred)
-        {
-            return new AccountState(this.AccountNumber, this.CurrentBalance,
-                                    occurred.AccountStatus, this.Obligations,
-                                    SimulatedFields);
-        }
-
-        public AccountState Event(ObligationAddedToAccount occurred)
-        {
-            return new AccountState(this.AccountNumber, this.CurrentBalance,
-                                    this.AccountStatus,
-                                    this.Obligations.Add(occurred.Obligation.ObligationNumber, occurred.Obligation),
-                                    SimulatedFields);
+                                    LoadSumulation(SimulatedFields, "1", "My state has been updated, see..."),
+                                    AuditLog.Add(new StateLog("SuperSimpleSuperCoolEventFoundByRules", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
         public AccountState Event(ObligationAssessedConcept occurred)
@@ -150,56 +116,98 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates.Sta
             this.Obligations[occurred.ObligationNumber]?.PostTransaction(trans);
             return new AccountState(this.AccountNumber, this.CurrentBalance + occurred.Amount,
                                     this.AccountStatus, this.Obligations,
-                                    SimulatedFields);
-
+                                    SimulatedFields,
+                                    AuditLog.Add(new StateLog("ObligationAssessedConcept", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
+
+        public AccountState Event(AccountCurrentBalanceUpdated occurred)
+        {
+            return new AccountState(this.AccountNumber, occurred.CurrentBalance,
+                                    this.AccountStatus, this.Obligations,
+                                    SimulatedFields,
+                                   AuditLog.Add(new StateLog("AccountCurrentBalanceUpdated", occurred.UniqueGuid(), occurred.OccurredOn())));
+        }
+
+        public AccountState Event(AccountStatusChanged occurred)
+        {
+            return new AccountState(this.AccountNumber, this.CurrentBalance,
+                                    occurred.AccountStatus, this.Obligations,
+                                    SimulatedFields,
+                                    AuditLog.Add(new StateLog("AccountStatusChanged", occurred.UniqueGuid(), occurred.OccurredOn())));
+        }
+
+        public AccountState Event(AccountCancelled occurred)
+        {
+            return new AccountState(this.AccountNumber, this.CurrentBalance,
+                                    occurred.AccountStatus, this.Obligations,
+                                    SimulatedFields,
+                                    AuditLog.Add(new StateLog("AccountCancelled", occurred.UniqueGuid(), occurred.OccurredOn())));
+        }
+
+        public AccountState Event(ObligationAddedToAccount occurred)
+        {
+            return new AccountState(this.AccountNumber, this.CurrentBalance,
+                                    this.AccountStatus,
+                                    this.Obligations.Add(occurred.Obligation.ObligationNumber, occurred.Obligation),
+                                    SimulatedFields,
+                                    AuditLog.Add(new StateLog("ObligationAddedToAccount", occurred.UniqueGuid(), occurred.OccurredOn())));
+        }
+
         public AccountState Event(ObligationSettledConcept occurred)
         {
             var trans = new FinancialTransaction(occurred.FinancialConcept, occurred.Amount);
             this.Obligations[occurred.ObligationNumber]?.PostTransaction(trans);
             return new AccountState(this.AccountNumber, this.CurrentBalance,
                                     this.AccountStatus, this.Obligations,
-                                    SimulatedFields);
-
+                                    SimulatedFields,
+                                    AuditLog.Add(new StateLog("ObligationSettledConcept", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
+
         public AccountState Event(AccountCreated occurred)
         {
 
-            return new AccountState(occurred.AccountNumber, LoadSumulation().ToImmutableDictionary());
+            return new AccountState(occurred.AccountNumber,
+                                    LoadSimulation(),
+                                    AuditLog.Add(new StateLog("AccountCreated", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-
-        private static ImmutableDictionary<string, string> LoadSumulation()
+        /* Helpers */
+        private static ImmutableDictionary<string, string> LoadSimulation()
         {
             var range = ImmutableDictionary.Create<string, string>();
             for (int i = 1; i <= 100; i++)
             {
 
-                range.Add(i.ToString(), $"This simulates field {i.ToString()}");
+                range = range.Add(i.ToString(), $"This simulates field {i.ToString()}");
             }
 
             return range;
         }
+
         private static ImmutableDictionary<string, string> LoadSumulation(ImmutableDictionary<string, string> state,
                                                                           string keyToUpdate,
                                                                           string valueToUpdate)
         {
-            state.SetItem(keyToUpdate, valueToUpdate);
+            state = state.SetItem(keyToUpdate, valueToUpdate);
             return state;
         }
 
-        public ImmutableDictionary<string, Obligation> Obligations { get; }
-        public string AccountNumber { get; }
-        public double CurrentBalance { get; }
-        private AccountStatus AccountStatus { get; }
 
-        public string DebugInfo { get; set; }
+        public string AccountNumber { get; private set; }
 
-        public ImmutableDictionary<string, string> SimulatedFields { get; }
+        public double CurrentBalance { get; private set; }
+
+        public AccountStatus AccountStatus { get; private set; }
+
+        public ImmutableList<StateLog> AuditLog { get; private set; }
+
+        public ImmutableDictionary<string, string> SimulatedFields { get; private set; }
+
+        public ImmutableDictionary<string, Obligation> Obligations { get; private set; }
 
         public override string ToString()
         {
-            return string.Format("[AccountState: Obligations={0}, AccountNumber={1}, CurrentBalance={2}, DebugInfo={3}, SimulatedFields={4}]", Obligations, AccountNumber, CurrentBalance, DebugInfo, SimulatedFields);
+            return string.Format("[AccountState: Obligations={0}, AccountNumber={1}, CurrentBalance={2}, DebugInfo={3}, SimulatedFields={4}]", Obligations, AccountNumber, CurrentBalance, AuditLog, SimulatedFields);
         }
     }
 

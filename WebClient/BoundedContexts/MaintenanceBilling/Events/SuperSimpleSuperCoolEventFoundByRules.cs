@@ -19,15 +19,18 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Events
         {
             return _UniqueGuid;
         }
-
-        public SuperSimpleSuperCoolEventFoundByRules(string message)
+        public SuperSimpleSuperCoolEventFoundByRules()
         {
             _UniqueGuid = Guid.NewGuid();
             _OccurredOn = DateTime.Now;
+        }
+        public SuperSimpleSuperCoolEventFoundByRules(string message) : this()
+        {
+
             Message = message;
         }
 
-        public SuperSimpleSuperCoolEventFoundByRules(string accountNumber, string message) : this(message)
+        public SuperSimpleSuperCoolEventFoundByRules(string accountNumber, string message) : this()
         {
             Message = message;
             AccountNumber = accountNumber;

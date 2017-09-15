@@ -159,7 +159,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.Aggregates
       
         public void ApplySnapShotStrategy()
         {
-            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 1000 == 0)
+            if (this.LastSequenceNr != 0 && this.LastSequenceNr % 50 == 0)
             {
                 var state = new Dictionary<string, IActorRef>(); // immutable, remember?
                 foreach (var record in _accounts.Keys)

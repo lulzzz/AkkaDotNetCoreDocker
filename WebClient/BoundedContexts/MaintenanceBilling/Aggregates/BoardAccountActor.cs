@@ -103,7 +103,10 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling
                 {
                     if (obligation.Value == accountNumber)
                     {
-                        accountActor.Tell(new AddObligationToAccount(obligation.Value, new Obligation(obligation.Key)));
+                        var o = new Obligation(obligation.Key);
+                        /* maybe messing with the  belongs in the reader? */
+                        o = o.SetStatus(ObligationStatus.Active); 
+                        accountActor.Tell(new AddObligationToAccount(obligation.Value, o));
                     }
                 }
             }

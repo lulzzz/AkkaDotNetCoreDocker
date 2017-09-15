@@ -49,7 +49,7 @@ namespace WebClient.Controllers
 
         [Route("api/account/{actorName}/info")]
         [HttpGet]
-        public async Task<AccountStateViewModel> AccountDetails(string actorName)
+        public AccountStateViewModel AccountDetails(string actorName)
         {
             var system = ActorSystemRefs
                 .ActorSystem
@@ -58,7 +58,8 @@ namespace WebClient.Controllers
             {
                 return new AccountStateViewModel($"{actorName} is not running at the moment");
             }
-            var response = await system.Result.Ask<ThisIsMyInfo>(new TellMeYourInfo(), TimeSpan.FromSeconds(1));
+            var response = system.Result.Ask<ThisIsMyInfo>(new TellMeYourInfo(), TimeSpan.FromSeconds(3)).Result;
+            response.Info.AuditLog.Sort((x, y) => x.EventDate >= y.EventDate ? 1 : -1);
 
             return new AccountStateViewModel(response.Info);
         }
@@ -82,12 +83,12 @@ namespace WebClient.Controllers
         [HttpGet]
         public InvoiceLineItem GetInvoiceLineItem(string actorName)
         {
-            return new InvoiceLineItem(FinancialConcept.Tax,0,0,0);
+            return new InvoiceLineItem(FinancialConcept.Tax, 0, 0, 0);
         }
 
         [Route("api/account/{actorName}/assessment")]
         [HttpPost]
-        public async Task<string> AccountPayment( string actorName,[FromBody]SimulateAssessmentModel Assessment)
+        public async Task<string> AccountPayment(string actorName, [FromBody]SimulateAssessmentModel Assessment)
         {
             var system = ActorSystemRefs
                 .ActorSystem

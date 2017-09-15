@@ -22,6 +22,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
 							result.RuleProcessedResults.Add(rule,$"Business Rule Applied. {rule.GetResultDetails()}");
                             rule.GetGeneratedEvents().ForEach( @event => result.GeneratedEvents.Add(@event));
                             result.GeneratedState = rule.GetGeneratedState();
+                            result.Success = true;
                         }else{
                             result.Success = false;
                             result.RuleProcessedResults.Add(rule, $"Business Rule Failed Application. {rule.GetResultDetails()}");

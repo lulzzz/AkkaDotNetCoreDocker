@@ -14,7 +14,7 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
         private string DetailsGenerated;
         private ImmutableList<InvoiceLineItem> LineItems;
 
-        public bool Success { get; internal set; }
+        public bool Success { get; private set; }
 
         public AnObligationMustBeActiveForBilling(AccountState accountState, ImmutableList<InvoiceLineItem> lineItems)
         {
@@ -42,29 +42,26 @@ namespace AkkaDotNetCoreDocker.BoundedContexts.MaintenanceBilling.BusinessRules
         {
             this.EventsGenerated = new List<IEvent>();
             Obligation obligationToUse = null;
-            foreach (var item in AccountState.Obligations)
+            foreach (var item in AccountState.Obligations.Values.ToImmutableList())
             {
-                if (item.Value.Status == ObligationStatus.Active)
+                if (item.Status == ObligationStatus.Active)
                 {
-                    obligationToUse = item.Value;
-
+                    obligationToUse = item;
+                    break;
                 }
             }
             if (obligationToUse != null)
             {
-                this.EventsGenerated
-                       .Add(new ObligationUsedForBilling(
-                            obligationNumber: obligationToUse.ObligationNumber,
-                            message: "Active obligation used for billing"
-                       ));
                 foreach (var item in LineItems)
                 {
                     var @event = new ObligationAssessedConcept(obligationToUse.ObligationNumber, item.Item, item.TotalAmount);
                     this.EventsGenerated.Add(@event);
+
                 }
 
                 this.DetailsGenerated = "THIS WORKED";
                 this.Success = true;
+
             }
             else
             {
