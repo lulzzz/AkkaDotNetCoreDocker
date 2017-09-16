@@ -40,10 +40,7 @@ namespace WebClient
             app.UseMvc();
 
             /* run the actor system */
-            var mainConfig = ConfigurationFactory.Default();
-            mainConfig = mainConfig.WithFallback(getConfiguration());
-
-            ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", mainConfig);
+            ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", getConfiguration());
 
             SystemActors.AccountSupervisor =
                 ActorSystemRefs
@@ -113,32 +110,12 @@ namespace WebClient
 
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = DEBUG
-                akka.remote.dot-netty.tcp.hostname = ""localhost""
+                akka.remote.dot-netty.tcp.hostname = ""127.0.0.1""
                 akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.seed-nodes = [""akka.tcp://demo-system@localhost:4053""] 
-
+                akka.cluster.seed-nodes = [""akka.tcp://demo-system@127.0.0.1:4053""] 
+                akka.cluster.roles = [concord]
            ");
-            //akka.persistence.journal.plugin = "akka.persistence.journal.postgresql"
-            //akka.persistence.journal.postgresql.class = "Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql"
-            //akka.persistence.journal.postgresql.plugin-dispatcher = "akka.actor.default-dispatcher"
-            //akka.persistence.journal.postgresql.connection-string = "postgresql://localhost/akka_demo"
-            //akka.persistence.journal.postgresql.connection-timeout = 30s
-            //akka.persistence.journal.postgresql.schema-name = public
-            //akka.persistence.journal.postgresql.table-name = event_journal
-            //akka.persistence.journal.postgresql.auto-initialize = on
-            //akka.persistence.journal.postgresql.timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
-            //akka.persistence.journal.postgresql.metadata-table-name = metadata
-            //akka.persistence.journal.postgresql.stored-as = BYTEA
 
-            //akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.postgresql"
-            //akka.persistence.snapshot-store.postgresql.class = "Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql"
-            //akka.persistence.snapshot-store.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
-            //akka.persistence.snapshot-store.postgresql.connection-string = "postgresql://localhost/akka_demo"
-            //akka.persistence.snapshot-store.postgresql.connection-timeout = 30s
-            //akka.persistence.snapshot-store.postgresql.schema-name = public
-            //akka.persistence.snapshot-store.postgresql.table-name = snapshot_store
-            //akka.persistence.snapshot-store.postgresql.auto-initialize = on
-            //akka.persistence.snapshot-store.postgresql.stored-as = BYTEA
 
         }
     }
