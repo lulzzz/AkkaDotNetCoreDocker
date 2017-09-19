@@ -1,0 +1,61 @@
+{
+	"variables": [],
+	"info": {
+		"name": "Akka Demo",
+		"_postman_id": "9eaa4e76-1b21-115f-bc0f-c36f1d02f514",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Run Simulation of Client Boarding {Raintree}",
+			"request": {
+				"url": "localhost:5000/api/supervisor/simulation",
+				"method": "POST",
+				"header": [
+					{
+						"key": "conten",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"ClientName\": \"Raintree\",\n\t\"ClientAccountsFilePath\": \"./SampleData/Raintree.txt\",\n\t\"ObligationsFilePath\":\"./SampleData/Obligations/Raintree.txt\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Bill Account ",
+			"request": {
+				"url": "localhost:5000/api/account/89467372476/assessment",
+				"method": "POST",
+				"header": [
+					{
+						"key": "conten",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"actorName\":\"49812282986\",\n\t\"LineItems\":\n\t[\n\t\t{\n\t\t    \"item\": 1,\n\t\t    \"units\": 10,\n\t\t    \"unitAmount\": 9.99,\n\t\t    \"totalAmount\": 99.90\n\t\t}\n    ]\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
