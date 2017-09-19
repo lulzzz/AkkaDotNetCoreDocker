@@ -1,4 +1,4 @@
-# AkkaDotNetCoreDocker
+# PoC of Akka.Net on Docker
 This is a POC of Akka.net on .Net Core deployed on Docker.  
 
 The goals of this POC are as follows:
