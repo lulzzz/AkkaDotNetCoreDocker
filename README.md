@@ -30,7 +30,7 @@ runMonitoring.sh
 
 ## Generating Sample Accounts
 ```bash
-cd SampleData
+cd AkkaNetPoC/Loaner/SampleData
 ./GenerateSampleData.pl ####
 ```
-Where #### is the number of accounts you want ot generate.
+Where #### is the number of accounts you want ot generate. Note that it defaults to looking for a client named 'Raintree.txt', so you can override it with the sample generated files.
