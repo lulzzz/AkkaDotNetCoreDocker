@@ -6,6 +6,7 @@ The goals of this POC are as follows:
 + Determine the viability of using Akka.Net in a production-like environment.
 + Identify challenges of using Event Sourcing to model state transitions.
 
+Here is the list of pending [TODOs](TODO.md)
 
 ## Running It
 ```bash
