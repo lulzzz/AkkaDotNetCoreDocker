@@ -9,8 +9,14 @@ The goals of this POC are as follows:
 
 ## Running It
 ```bash
-dotnet run --project WebClient
+cd AkkaNetPoC/ 
+dotnet run --project Loaner
 ```
+## To run it in a cluster use Lighthouse
+```bash
+cd AkkaNetPoC/ 
+dotnet run --project Lighthouse.NetCoreApp
+ ```
 
 ## Setting up Monitoring (Locally)
 ```bash
