@@ -7,6 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lighthouse.NetCoreApp", "Li
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loaner", "Loaner\Loaner.csproj", "{FEBE9F4C-6C24-4397-B80A-F0160515F2CD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{19CF4BAD-FE6B-4443-ABF9-25E2B1A0F859}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+		..\TODO.md = ..\TODO.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -1,16 +1,20 @@
 ﻿
-using System;
-using System.Collections.Immutable;
 using Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State;
+using System;
+using Loaner.BoundedContexts.MaintenanceBilling.Aggregates;
 
 namespace Loaner.api.Models
 {
     public class AccountStateViewModel
     {
-        public AccountStateViewModel(string message)
+        public AccountStateViewModel()
+        {
+            AccountState = new AccountState();
+        }
+
+        public AccountStateViewModel(string message) : this()
         {
             Message = message;
-            AccountState = new AccountState();
         }
 
         public AccountStateViewModel(AccountState accountState)
@@ -18,8 +22,8 @@ namespace Loaner.api.Models
             this.AccountState = accountState;
             Message = $"State as of: {DateTime.Now}";
         }
-        public AccountState AccountState { get; }
+        public AccountState AccountState { get; set; }
 
-        public string Message { get; }
+        public string Message { get; set; }
     }
 }

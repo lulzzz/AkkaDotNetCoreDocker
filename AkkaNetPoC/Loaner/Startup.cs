@@ -1,51 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Akka.Actor;
-using Loaner.BoudedContexts.Test;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Loaner.api.ActorManagement;
-using Loaner.BoundedContexts.MaintenanceBilling.Aggregates;
-using Akka.Configuration;
+﻿
+
+
+using System;
 
 namespace Loaner
 {
+    using Akka.Actor;
+    using Akka.Configuration;
+    using api.ActorManagement;
+    using BoundedContexts.Test;
+    using BoundedContexts.MaintenanceBilling.Aggregates;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Configuration;
+    using Nancy.Owin;
+
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private readonly IConfiguration config;
+        public Startup(IHostingEnvironment env)
         {
-            Configuration = configuration;
+            ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", GetConfiguration());
+            LoanerActors.LittleActor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<LittleActor>(),"LittleActor");
+            LoanerActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>(),"demo-supervisor");
+            
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .SetBasePath(env.ContentRootPath);
+
+            config = builder.Build();
         }
 
-        public IConfiguration Configuration { get; }
-
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public void Configure(IApplicationBuilder app)
         {
-            ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", getConfiguration());
-            LoanerActors.LittleActor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<LittleActor>());
-            LoanerActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>());
-            services.AddSingleton(typeof(ActorSystem), (serviceProvider) => ActorSystemRefs.ActorSystem);
-            services.AddMvc();
+            var appConfig = new AppConfiguration();
+            ConfigurationBinder.Bind(config, appConfig);
+            
+            app.UseOwin(x => x.UseNancy(opt => opt.Bootstrapper = new DemoBootstrapper(appConfig)));
         }
-
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
-        {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
-            app.UseMvc();
-        }
-        public static Config getConfiguration()
+        public static Config GetConfiguration()
         {
             var hocon = $@" 
 
@@ -90,10 +83,10 @@ namespace Loaner
                 akka.persistence.journal.sqlite.metadata-table-name = journal_metadata
                 akka.persistence.journal.sqlite.auto-initialize = on
                 akka.persistence.journal.sqlite.timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
-                akka.persistence.journal.sqlite.connection-string = ""Data Source=akka_demo.db""
+                akka.persistence.journal.sqlite.connection-string = ""Data Source=../../../akka_demo.db""
 
                 akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sqlite""
-                akka.persistence.snapshot-store.sqlite.connection-string = ""Data Source=akka_demo.db""
+                akka.persistence.snapshot-store.sqlite.connection-string = ""Data Source=../../../akka_demo.db""
                 akka.persistence.snapshot-store.sqlite.class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
                 akka.persistence.snapshot-store.sqlite.plugin-dispatcher = ""akka.actor.default-dispatcher""
                 akka.persistence.snapshot-store.sqlite.connection-timeout = 30s

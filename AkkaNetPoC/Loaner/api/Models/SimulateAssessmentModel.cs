@@ -6,12 +6,17 @@ namespace Loaner.api.Models
 {
     public class SimulateAssessmentModel
     {
+        public SimulateAssessmentModel()
+        {
+            LineItems = new List<InvoiceLineItem>();
+        }
         public SimulateAssessmentModel(List<InvoiceLineItem> lineItems)
         {
-            LineItems = lineItems;
+            LineItems = lineItems ?? new List<InvoiceLineItem>();
         }
 
-        public List<InvoiceLineItem> LineItems { get; private set; }
+        public List<InvoiceLineItem> LineItems { get; set; }
+
     }
 }
 

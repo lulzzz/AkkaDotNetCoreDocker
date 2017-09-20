@@ -5,6 +5,10 @@ namespace Loaner.api
 {
     public class SupervisedAccounts 
     {
+        public SupervisedAccounts()
+        {
+            Accounts = new Dictionary<string, string>();
+        }
         public SupervisedAccounts(string message, Dictionary<string,string> accounts)
         {
             Message = message;
@@ -14,13 +18,13 @@ namespace Loaner.api
         public string Message
         {
             get;
-            private set;
+             set;
         }
 
         public Dictionary<string, string> Accounts
         {
             get;
-            private set;
+             set;
         }
     }
 
