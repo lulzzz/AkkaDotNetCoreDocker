@@ -1,11 +1,12 @@
-using System;
-using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Monitoring;
 using Akka.Persistence;
 using Loaner.BoundedContexts.MaintenanceBilling.Commands;
 using Loaner.BoundedContexts.MaintenanceBilling.Events;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -29,9 +30,9 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             Command<SuperviseThisAccount>(command => ProcessSupervision(command));
             Command<StartAccounts>(command => StartAccounts());
             Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus($"I have {_accounts.Count} accounts.",
-                new Dictionary<string, string>())));
+                DictionaryToStringList())));
             Command<AboutMe>(me => Console.WriteLine($"About me: {me.Me}"));
-            Command<string>(NoMessage => { });
+            Command<string>(noMessage => { });
 
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
             Command<SaveSnapshotSuccess>(success => DeleteMessages(success.Metadata.SequenceNr));
@@ -75,6 +76,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             var boardingActor = Context.ActorOf<BoardAccountActor>($"Client-{client.ClientName}");
             boardingActor.Tell(client);
             Sender.Tell(new ThisIsMyStatus($"Started boarding of {client.ClientName} accounts at {DateTime.Now} "));
+            //boardingActor.Tell(PoisonPill.Instance);
         }
 
         private Dictionary<string, string> DictionaryToStringList()
@@ -88,9 +90,9 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
         private void StartAccounts()
         {
             Monitor();
-            var accounts = new List<string>(_accounts.Keys);
-            foreach (var account in accounts)
-                if (_accounts[account] == null)
+            var immutAccounts = _accounts.Keys.ToList();
+            foreach (var account in immutAccounts )
+                if (account.Length != 0 && _accounts[account] == null)
                 {
                     InstantiateThisAccount(account);
                     _log.Debug($"instantiated account {account}");
@@ -100,7 +102,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                     _log.Debug($"skipped account {account}, already instantiated.");
                 }
             Sender.Tell(new ThisIsMyStatus($"{_accounts.Count} accounts started.", DictionaryToStringList()));
-            ;
+
         }
 
         private void ProcessSupervision(SuperviseThisAccount command)
@@ -108,10 +110,11 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             Monitor();
             if (!_accounts.ContainsKey(command.AccountNumber))
             {
-                var @event = AddThisAccountToState(command.AccountNumber);
+                var @event = new AccountAddedToSupervision(command.AccountNumber);
                 Persist(@event, s =>
                 {
-                    var address = InstantiateThisAccount(command.AccountNumber);
+                    _accounts.Add(command.AccountNumber, null); 
+                    //InstantiateThisAccount(command.AccountNumber);
                 });
                 ApplySnapShotStrategy();
             }
@@ -123,28 +126,24 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
 
         private void ReplayEvent(string accountNumber)
         {
-            if (_accounts.ContainsKey(accountNumber))
+            if (string.IsNullOrEmpty(accountNumber))
             {
-                _log.Info($"Supervisor already has {accountNumber} in state. No action taken");
+                 throw new Exception("Why is this blank?");
             }
             else
             {
-                _accounts.Add(accountNumber, null);
-                _log.Info($"Replayed event on {accountNumber}");
+                if (_accounts.ContainsKey(accountNumber))
+                {
+                    _log.Info($"Supervisor already has {accountNumber} in state. No action taken");
+                }
+                else
+                {
+                    _accounts.Add(accountNumber, null);
+                    _log.Info($"Replayed event on {accountNumber}");
+                }
             }
         }
-
-        private AccountAddedToSupervision AddThisAccountToState(string accountNumber)
-        {
-            if (!_accounts.ContainsKey(accountNumber))
-            {
-                _accounts.Add(accountNumber, null);
-                var @event = new AccountAddedToSupervision(accountNumber);
-                return @event;
-            }
-            return null;
-        }
-
+ 
         private IActorRef InstantiateThisAccount(string accountNumber)
         {
             if (_accounts.ContainsKey(accountNumber))
@@ -175,9 +174,9 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
     {
         public TheReferenceToThisActor(IActorRef address)
         {
-            this.address = address;
+            this.Address = address;
         }
 
-        public IActorRef address { get; }
+        public IActorRef Address { get; }
     }
 }

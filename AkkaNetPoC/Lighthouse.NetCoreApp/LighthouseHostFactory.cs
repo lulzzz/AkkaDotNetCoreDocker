@@ -64,6 +64,7 @@ akka.remote.dot-netty.tcp.port = {1}", ipAddress, port))
         private static Config GetConfig()
         {
             var configString = @"
+                    
                     lighthouse{
 		                    actorsystem: ""demo-system"" #POPULATE NAME OF YOUR ACTOR SYSTEM HERE
 	                    }
@@ -72,6 +73,13 @@ akka.remote.dot-netty.tcp.port = {1}", ipAddress, port))
 	                    actor { 
 		                    provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
 	                    }
+                        serializers {
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }
+                        serialization-bindings { 
+                            ""System.Object"" = hyperion 
+                        }
+                
 						
 	                    remote {
 		                    log-remote-lifecycle-events = DEBUG

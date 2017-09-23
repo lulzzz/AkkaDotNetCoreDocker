@@ -1,7 +1,4 @@
-﻿
-using Loaner.BoundedContexts.MaintenanceBilling.Aggregates;
-
-namespace Loaner.api.Controllers
+﻿namespace Loaner.api.Controllers
 {
     using ActorManagement;
     using Akka.Actor;
@@ -23,21 +20,28 @@ namespace Loaner.api.Controllers
                 var answer = new ThisIsMyStatus("This didn't work");
                 await Task.Run(() =>
                 {
-                    answer = LoanerActors.AccountSupervisor.Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(5)).Result;
-                    var response = new SupervisedAccounts(answer.Message, answer.Accounts);
-                    return response;
+                    answer = LoanerActors
+                            .AccountSupervisor
+                            .Ask<ThisIsMyStatus>(new TellMeYourStatus(), TimeSpan.FromSeconds(5))
+                            .Result;
+                    return Response.AsJson( new SupervisedAccounts(answer.Message, answer.Accounts));
                 });
                 return Response.AsJson( new SupervisedAccounts(answer.Message, answer.Accounts));
             });
+
             Get("api/supervisor/run", async args =>
             {
                 var answer = new ThisIsMyStatus("This didn't work");
                 await Task.Run(() =>
                 {
-                    answer = LoanerActors.AccountSupervisor.Ask<ThisIsMyStatus>(new StartAccounts(), TimeSpan.FromSeconds(5)).Result;
+                    answer = LoanerActors
+                        .AccountSupervisor
+                        .Ask<ThisIsMyStatus>(new StartAccounts(), TimeSpan.FromSeconds(5))
+                        .Result;
                     var response = new SupervisedAccounts(answer.Message, answer.Accounts);
+                    return Response.AsJson(new SupervisedAccounts(answer.Message, answer.Accounts));
                 });
-                return Response.AsJson(new SupervisedAccounts(answer.Message, answer.Accounts));
+                return Response.AsJson(answer);
 
             });
 

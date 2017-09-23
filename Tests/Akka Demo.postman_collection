@@ -2,22 +2,151 @@
 	"variables": [],
 	"info": {
 		"name": "Akka Demo",
-		"_postman_id": "9eaa4e76-1b21-115f-bc0f-c36f1d02f514",
+		"_postman_id": "f979ff5e-9b64-8ede-b7d5-d3a8ba8a7ed4",
 		"description": "",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Run Simulation of Client Boarding {Raintree}",
+			"name": "Alive",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"tests[\"Body matches string\"] = responseBody.has(\"Hello from Nancy running on CoreCLR\");"
+						]
+					}
+				}
+			],
 			"request": {
-				"url": "localhost:5000/api/supervisor/simulation",
+				"url": "http://localhost:50325/",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Supervisor Alive",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							" ",
+							" ",
+							" ",
+							"",
+							"tests[\"Status code is 200\"] = responseCode.code === 200;"
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "http://localhost:50325/api/supervisor",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Run Accounts",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							" ",
+							" ",
+							" ",
+							"",
+							"tests[\"Status code is 200\"] = responseCode.code === 200;"
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "http://localhost:50325/api/supervisor/run",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Bill Account ",
+			"request": {
+				"url": "localhost:50325/api/account/11366893555/assessment",
 				"method": "POST",
 				"header": [
 					{
-						"key": "conten",
+						"key": "Content-Type",
 						"value": "application/json",
 						"description": ""
-					},
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"LineItems\":\n\t[\n\t\t{\n\t\t    \"Item\": 1,\n\t\t    \"Units\": 10,\n\t\t    \"UnitAmount\": 9.99,\n\t\t    \"TotalAmount\": 99.90\n\t\t}\n    ]\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Account Alive",
+			"request": {
+				"url": "localhost:50325/api/account/11366893555/",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"LineItems\":\n\t[\n\t\t{\n\t\t    \"item\": 1,\n\t\t    \"units\": 10,\n\t\t    \"unitAmount\": 9.99,\n\t\t    \"totalAmount\": 99.90\n\t\t}\n    ]\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Account Info",
+			"request": {
+				"url": "localhost:50325/api/account/11366893555/info",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"LineItems\":\n\t[\n\t\t{\n\t\t    \"item\": 1,\n\t\t    \"units\": 10,\n\t\t    \"unitAmount\": 9.99,\n\t\t    \"totalAmount\": 99.90\n\t\t}\n    ]\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Run Simulation of Client Boarding {Raintree}",
+			"request": {
+				"url": "http://localhost:50325/api/supervisor/simulation",
+				"method": "POST",
+				"header": [
 					{
 						"key": "Content-Type",
 						"value": "application/json",
@@ -27,31 +156,6 @@
 				"body": {
 					"mode": "raw",
 					"raw": "{\n\t\"ClientName\": \"Raintree\",\n\t\"ClientAccountsFilePath\": \"./SampleData/Raintree.txt\",\n\t\"ObligationsFilePath\":\"./SampleData/Obligations/Raintree.txt\"\n}"
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "Bill Account ",
-			"request": {
-				"url": "localhost:5000/api/account/89467372476/assessment",
-				"method": "POST",
-				"header": [
-					{
-						"key": "conten",
-						"value": "application/json",
-						"description": ""
-					},
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"description": ""
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n\t\"actorName\":\"49812282986\",\n\t\"LineItems\":\n\t[\n\t\t{\n\t\t    \"item\": 1,\n\t\t    \"units\": 10,\n\t\t    \"unitAmount\": 9.99,\n\t\t    \"totalAmount\": 99.90\n\t\t}\n    ]\n}"
 				},
 				"description": ""
 			},

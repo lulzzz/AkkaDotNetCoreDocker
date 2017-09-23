@@ -64,13 +64,6 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 $"Your billing request has been submited to occount {_accountState.AccountNumber}. The new account state is: {_accountState}"));
         }
 
-
-        /*private void WakeUp()
-        {
-            var Mommy = Context.ActorSelection($"/user/demo-supervisor-{_accountState.Portfolio}").ResolveOne(TimeSpan.FromSeconds(10)).Result;
-            Mommy.Tell(new SuperviseThisAccount(_accountState.AccountNumber));
-        }*/
-
         private void SendParentMyState(AskToBeSupervised command)
         {
             Monitor();
@@ -78,7 +71,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
              * send the supervisor to add it to it's list -- then it can terminate. 
              */
             command.MyNewParent.Tell(new SuperviseThisAccount(Self.Path.Name));
-            Context.Stop(Self);
+            Self.Tell(PoisonPill.Instance);
         }
 
         private void ApplySnapShot(SnapshotOffer offer)

@@ -6,14 +6,11 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State
 {
     public class ObligationAddedToAccount : IEvent
     {
-        public ObligationAddedToAccount()
+        
+        public ObligationAddedToAccount(string accountNumber, Obligation obligation)  
         {
             _UniqueGuid = Guid.NewGuid();
             _OccurredOn = DateTime.Now;
-        }
-
-        public ObligationAddedToAccount(string accountNumber, Obligation obligation) : this()
-        {
             Obligation = obligation;
             AccountNumber = accountNumber;
         }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State;
 using Loaner.BoundedContexts.MaintenanceBilling.Events;
@@ -39,19 +40,21 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             Obligations = ImmutableDictionary.Create<string, Obligation>();
         }
 
-        private AccountState(string accountNumber, double currentBalance,
+        private AccountState(string accountNumber, 
+            double currentBalance,
             AccountStatus accountStatus,
             ImmutableDictionary<string, Obligation> obligations,
             ImmutableDictionary<string, string> simulation)
         {
             AccountNumber = accountNumber;
             CurrentBalance = currentBalance;
-            accountStatus = AccountStatus;
+            AccountStatus = accountStatus;
             Obligations = obligations;
             SimulatedFields = simulation;
         }
 
-        private AccountState(string accountNumber, double currentBalance,
+        private AccountState(string accountNumber, 
+            double currentBalance,
             AccountStatus accountStatus,
             ImmutableDictionary<string, Obligation> obligations,
             ImmutableDictionary<string, string> simulation,
@@ -59,7 +62,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
         {
             AccountNumber = accountNumber;
             CurrentBalance = currentBalance;
-            accountStatus = AccountStatus;
+            AccountStatus = accountStatus;
             Obligations = obligations;
             AuditLog = log;
             SimulatedFields = simulation;
@@ -77,12 +80,10 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
         public ImmutableDictionary<string, string> SimulatedFields { get; }
 
         public ImmutableDictionary<string, Obligation> Obligations { get; }
+               
         /**
-         * 
          * The Event() handler is responsible for always returning a new state
-         * 
          */
-
         public AccountState Event(IEvent @event)
         {
             switch (@event)
@@ -109,7 +110,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             }
         }
 
-        public AccountState Event(SomeOneSaidHiToMe occurred)
+        private AccountState Event(SomeOneSaidHiToMe occurred)
         {
             return new AccountState(AccountNumber, CurrentBalance,
                 AccountStatus, Obligations,
@@ -117,7 +118,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 AuditLog.Add(new StateLog("SomeOneSaidHiToMe", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(SuperSimpleSuperCoolEventFoundByRules occurred)
+        private AccountState Event(SuperSimpleSuperCoolEventFoundByRules occurred)
         {
             return new AccountState(AccountNumber, CurrentBalance,
                 AccountStatus, Obligations,
@@ -126,7 +127,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                     occurred.OccurredOn())));
         }
 
-        public AccountState Event(ObligationAssessedConcept occurred)
+        private AccountState Event(ObligationAssessedConcept occurred)
         {
             var trans = new FinancialTransaction(occurred.FinancialConcept, occurred.Amount);
             Obligations[occurred.ObligationNumber]?.PostTransaction(trans);
@@ -136,7 +137,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 AuditLog.Add(new StateLog("ObligationAssessedConcept", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(AccountCurrentBalanceUpdated occurred)
+        private AccountState Event(AccountCurrentBalanceUpdated occurred)
         {
             return new AccountState(AccountNumber, occurred.CurrentBalance,
                 AccountStatus, Obligations,
@@ -145,7 +146,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                     occurred.OccurredOn())));
         }
 
-        public AccountState Event(AccountStatusChanged occurred)
+        private AccountState Event(AccountStatusChanged occurred)
         {
             return new AccountState(AccountNumber, CurrentBalance,
                 occurred.AccountStatus, Obligations,
@@ -153,7 +154,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 AuditLog.Add(new StateLog("AccountStatusChanged", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(AccountCancelled occurred)
+        private AccountState Event(AccountCancelled occurred)
         {
             return new AccountState(AccountNumber, CurrentBalance,
                 occurred.AccountStatus, Obligations,
@@ -161,7 +162,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 AuditLog.Add(new StateLog("AccountCancelled", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(ObligationAddedToAccount occurred)
+        private AccountState Event(ObligationAddedToAccount occurred)
         {
             return new AccountState(AccountNumber, CurrentBalance,
                 AccountStatus,
@@ -170,17 +171,17 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 AuditLog.Add(new StateLog("ObligationAddedToAccount", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(ObligationSettledConcept occurred)
+        private AccountState Event(ObligationSettledConcept occurred)
         {
             var trans = new FinancialTransaction(occurred.FinancialConcept, occurred.Amount);
-            Obligations[occurred.ObligationNumber]?.PostTransaction(trans);
+            Obligations[occurred.ObligationNumber].PostTransaction(trans);
             return new AccountState(AccountNumber, CurrentBalance,
                 AccountStatus, Obligations,
                 SimulatedFields,
                 AuditLog.Add(new StateLog("ObligationSettledConcept", occurred.UniqueGuid(), occurred.OccurredOn())));
         }
 
-        public AccountState Event(AccountCreated occurred)
+        private AccountState Event(AccountCreated occurred)
         {
             return new AccountState(occurred.AccountNumber,
                 LoadSimulation(),
@@ -207,9 +208,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
 
         public override string ToString()
         {
-            return string.Format(
-                "[AccountState: Obligations={0}, AccountNumber={1}, CurrentBalance={2}, DebugInfo={3}, SimulatedFields={4}]",
-                Obligations, AccountNumber, CurrentBalance, AuditLog, SimulatedFields);
+            return $"[AccountState: Obligations={Obligations}, AccountNumber={AccountNumber}, CurrentBalance={CurrentBalance}, DebugInfo={AuditLog}, SimulatedFields={SimulatedFields}]";
         }
     }
 }

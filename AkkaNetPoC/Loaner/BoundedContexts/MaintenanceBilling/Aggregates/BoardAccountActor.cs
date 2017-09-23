@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
+using System.Text;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -19,9 +21,8 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
     public class BoardAccountActor : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private Dictionary<string, IActorRef> AccountsBeingBoarded = new Dictionary<string, IActorRef>();
-        private readonly Dictionary<string, string> AccountsInFile = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> ObligationsInFile = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _accountsInFile = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _obligationsInFile = new Dictionary<string, string>();
 
         public BoardAccountActor()
         {
@@ -49,14 +50,23 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             var props = new RoundRobinPool(200).Props(Props.Create<BoardAccountActor>());
             var router = Context.ActorOf(props, $"Client-{client.ClientName}-router");
 
-            foreach (var account in AccountsInFile)
+            foreach (var account in _accountsInFile)
             {
                 var obligations = ImmutableDictionary.Create<string, string>();
-                foreach (var item in ObligationsInFile)
+                //Pluck out all the obligations for this account
+                foreach (var item in _obligationsInFile)
+                {
                     if (item.Value == account.Key)
+                    {
                         obligations = obligations.Add(item.Key, item.Value);
+                    }
+                    
+                }
                 if (++counter % 1000 == 0)
+                {
                     _log.Info($"({counter}) Telling router {router.Path.Name} to spin up account {account.Key}... ");
+                }
+                //Then spint up the account
                 router.Tell(new SpinUpAccountActor(account.Key, obligations.ToImmutableDictionary(), supervisor));
             }
         }
@@ -69,15 +79,19 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             var accountActor = Context.ActorOf(props, accountNumber);
             accountActor.Tell(new CreateAccount(accountNumber));
 
-            if (obligations.ContainsValue(accountNumber))
+            if (obligations != null && obligations.ContainsValue(accountNumber))
+            {
                 foreach (var obligation in obligations)
+                {
                     if (obligation.Value == accountNumber)
                     {
-                        var o = new Obligation(obligation.Key);
-                        /* maybe messing with the  belongs in the reader? */
-                        o = o.SetStatus(ObligationStatus.Active);
-                        accountActor.Tell(new AddObligationToAccount(obligation.Value, o));
+                        var obli = new Obligation(obligation.Key);
+                        /* maybe messing with business logic belongs in the reader? */
+                        obli = obli.SetStatus(ObligationStatus.Active);
+                        accountActor.Tell(new AddObligationToAccount(obligation.Value, obli));
                     }
+                }
+            }
             accountActor.Tell(new AskToBeSupervised(supervisor));
         }
 
@@ -89,11 +103,14 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 _log.Info($"Gonna try to open file {obligationsFilePath}");
                 if (File.Exists(obligationsFilePath))
                 {
-                    var readText = File.ReadAllLines(obligationsFilePath);
+                    var readText = File.ReadAllLines(obligationsFilePath,Encoding.UTF8);
                     foreach (var row in readText)
                     {
-                        var line = row.Split('\t');
-                        ObligationsInFile.Add(line[0], line[1]);
+                        if (row.Length > 11)
+                        {
+                            var line = row.Split('\t');
+                            _obligationsInFile.Add(line[0], line[1]);
+                        }
                     }
                 }
                 _log.Info($"Successfully processing file {obligationsFilePath}");
@@ -111,11 +128,14 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 _log.Info($"Gonna try to open file {clientsFilePath}");
                 if (File.Exists(clientsFilePath))
                 {
-                    var readText = File.ReadAllLines(clientsFilePath);
+                    var readText = File.ReadAllLines(clientsFilePath,Encoding.UTF8);
                     foreach (var row in readText)
                     {
-                        var line = row.Split('\t');
-                        AccountsInFile.Add(line[0], line[1]);
+                        if (row.Length > 11)
+                        {
+                            var line = row.Split('\t');
+                            _accountsInFile.Add(line[0], line[1]);
+                        }
                     }
                 }
                 _log.Info($"Successfully processing file {clientsFilePath}");
