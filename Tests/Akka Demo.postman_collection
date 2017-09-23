@@ -84,7 +84,7 @@
 		{
 			"name": "Bill Account ",
 			"request": {
-				"url": "localhost:50325/api/account/11366893555/assessment",
+				"url": "localhost:50325/api/account/16885588799/assessment",
 				"method": "POST",
 				"header": [
 					{
@@ -104,7 +104,7 @@
 		{
 			"name": "Account Alive",
 			"request": {
-				"url": "localhost:50325/api/account/11366893555/",
+				"url": "localhost:50325/api/account/16885588799/",
 				"method": "GET",
 				"header": [
 					{
@@ -124,7 +124,7 @@
 		{
 			"name": "Account Info",
 			"request": {
-				"url": "localhost:50325/api/account/11366893555/info",
+				"url": "localhost:50325/api/account/74654243234/info",
 				"method": "GET",
 				"header": [
 					{
