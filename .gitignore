@@ -1,8 +1,8 @@
 # Autosave files
 *~
 out/
-SampleData/*.txt
-SampleData/Obligations/*.txt
+AkkaNetPoC/Loaner/SampleData/*.txt
+AkkaNetPoC/Loaner/SampleData/Obligations/*.txt
 akka_demo.db
 
 # build
