@@ -1,8 +1,7 @@
 ﻿using System;
-using Loaner.BoundedContexts.MaintenanceBilling.Events;
 using Loaner.BoundedContexts.MaintenanceBilling.Models;
 
-namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State
+namespace Loaner.BoundedContexts.MaintenanceBilling.Events
 {
     public class ObligationAddedToAccount : IEvent
     {

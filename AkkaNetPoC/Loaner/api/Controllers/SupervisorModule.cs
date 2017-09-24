@@ -48,6 +48,8 @@
             Post("api/supervisor/simulation", args=>
             {
                 SimulateBoardingOfAccountModel client = this.Bind<SimulateBoardingOfAccountModel>();
+                Console.WriteLine($"Supervisor's name is: {LoanerActors.AccountSupervisor.Path.Name}");
+
                 LoanerActors.AccountSupervisor.Tell(new SimulateBoardingOfAccounts(
                     client.ClientName,
                     client.ClientAccountsFilePath,

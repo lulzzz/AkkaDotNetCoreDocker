@@ -1,9 +1,8 @@
 ﻿using System;
 using Loaner.BoundedContexts.MaintenanceBilling.BusinessRules;
 using Loaner.BoundedContexts.MaintenanceBilling.Commands;
-using Loaner.BoundedContexts.MaintenanceBilling.Events;
 
-namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
+namespace Loaner.BoundedContexts.MaintenanceBilling.Events
 {
     public class FinancialConceptNotSettled : IEvent
     {

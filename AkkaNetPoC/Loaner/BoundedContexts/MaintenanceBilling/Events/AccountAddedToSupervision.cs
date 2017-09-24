@@ -1,7 +1,6 @@
 ﻿using System;
-using Loaner.BoundedContexts.MaintenanceBilling.Events;
 
-namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
+namespace Loaner.BoundedContexts.MaintenanceBilling.Events
 {
     internal class AccountAddedToSupervision : IEvent
     {
@@ -9,7 +8,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
         {
             _UniqueGuid = Guid.NewGuid();
             _OccurredOn = DateTime.Now;
-            AccountNumber = "";
+            
         }
 
         public AccountAddedToSupervision(string accountNumber) : this()
@@ -17,7 +16,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             AccountNumber = accountNumber;
         }
 
-        public string AccountNumber { get; }
+        public string AccountNumber { get; set; }
         private DateTime _OccurredOn { get; }
         private Guid _UniqueGuid { get; }
 

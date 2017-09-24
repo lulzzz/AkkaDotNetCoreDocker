@@ -1,38 +1,34 @@
 ﻿using System;
-using Loaner.BoundedContexts.MaintenanceBilling.Events;
 using Loaner.BoundedContexts.MaintenanceBilling.Models;
 
-namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State
+namespace Loaner.BoundedContexts.MaintenanceBilling.Events
 {
     public class ObligationAssessedConcept : IEvent
     {
-        public ObligationAssessedConcept()
-        {
-            _UniqueGuid = Guid.NewGuid();
-            _OccurredOn = DateTime.Now;
-        }
-
-        public ObligationAssessedConcept(string obligationNumber, FinancialConcept concept, double amount) : this()
+      
+        public ObligationAssessedConcept(string obligationNumber, FinancialConcept concept, double amount, Guid id, DateTime when)  
         {
             ObligationNumber = obligationNumber;
             FinancialConcept = concept;
             Amount = amount;
+            uniqueGuid = id;
+            occurredOn = when;
         }
 
         public string ObligationNumber { get; }
         public FinancialConcept FinancialConcept { get; }
         public double Amount { get; }
-        private DateTime _OccurredOn { get; }
-        private Guid _UniqueGuid { get; }
+        public DateTime occurredOn { get; }
+        public Guid uniqueGuid { get;  }
 
         public DateTime OccurredOn()
         {
-            return _OccurredOn;
+            return occurredOn;
         }
 
         public Guid UniqueGuid()
         {
-            return _UniqueGuid;
+            return uniqueGuid;
         }
     }
 }

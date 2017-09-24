@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Loaner.BoundedContexts.MaintenanceBilling.Aggregates;
@@ -53,7 +54,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.BusinessRules
                 foreach (var item in LineItems)
                 {
                     var @event =
-                        new ObligationAssessedConcept(obligationToUse.ObligationNumber, item.Item, item.TotalAmount);
+                        new ObligationAssessedConcept(obligationToUse.ObligationNumber, item.Item, item.TotalAmount, Guid.NewGuid(), DateTime.Now);
                     EventsGenerated.Add(@event);
                 }
 

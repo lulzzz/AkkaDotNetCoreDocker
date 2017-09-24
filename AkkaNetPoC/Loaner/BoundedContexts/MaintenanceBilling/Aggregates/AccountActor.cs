@@ -165,7 +165,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
         /*Example of how snapshotting can be custom to the actor, in this case per 'Account' events*/
         public void ApplySnapShotStrategy()
         {
-            if (LastSequenceNr != 0 && LastSequenceNr % 100 == 0)
+            if (LastSequenceNr != 0 && LastSequenceNr % 1000 == 0)
             {
                 SaveSnapshot(_accountState);
                 _log.Debug($"Snapshot taken. LastSequenceNr is {LastSequenceNr}.");

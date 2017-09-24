@@ -7,6 +7,7 @@ using Loaner.BoundedContexts.MaintenanceBilling.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nancy.Extensions;
 
 namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
 {
@@ -32,6 +33,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             Command<TellMeYourStatus>(asking => Sender.Tell(new ThisIsMyStatus($"I have {_accounts.Count} accounts.",
                 DictionaryToStringList())));
             Command<AboutMe>(me => Console.WriteLine($"About me: {me.Me}"));
+            Command<ThisIsMyStatus>(msg => _log.Debug(msg.Message));
             Command<string>(noMessage => { });
 
             /** Special handlers below; we can decide how to handle snapshot processin outcomes. */
@@ -61,13 +63,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             Context.IncrementMessagesReceived();
         }
 
-        private void ProcessSnapshot(SnapshotOffer offer)
-        {
-            Monitor();
-            _accounts = (Dictionary<string, IActorRef>) offer.Snapshot;
-            _log.Info($"Snapshot recovered.");
-        }
-
+        
         private void RunSimulator(SimulateBoardingOfAccounts client)
         {
             Monitor();
@@ -95,7 +91,6 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
                 if (account.Length != 0 && _accounts[account] == null)
                 {
                     InstantiateThisAccount(account);
-                    _log.Debug($"instantiated account {account}");
                 }
                 else
                 {
@@ -150,24 +145,41 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             {
                 var accountActor = Context.ActorOf(Props.Create<AccountActor>(), accountNumber);
                 _accounts[accountNumber] = accountActor;
+                accountActor.Tell(new TellMeYourStatus()); // to instantiate actor
                 _log.Debug($"Instantiated account {accountActor.Path.Name}");
                 return accountActor;
             }
             throw new Exception($"Why are you trying to instantiate an account not yet registered?");
         }
+        private void ProcessSnapshot(SnapshotOffer offer)
+        {
+            Monitor();
 
+            //var snap = ((Newtonsoft.Json.Linq.JArray) offer.Snapshot).ToObject<string[]>();
+            var snap = (string[]) offer.Snapshot;
+
+            foreach (var account in snap)
+            {
+                _accounts.Add(account, null);
+            }
+            _log.Info($"Snapshot recovered.");
+        }
         public void ApplySnapShotStrategy()
         {
-            if (LastSequenceNr != 0 && LastSequenceNr % 50 == 0)
+            if (LastSequenceNr != 0 && LastSequenceNr % 1000 == 0)
             {
-                var state = new Dictionary<string, IActorRef>(); // immutable, remember?
+                var state = new List<string>(); // Just need the name to kick it off?
                 foreach (var record in _accounts.Keys)
-                    state.Add(record, null);
-                SaveSnapshot(state);
+                    state.Add(record);
+                SaveSnapshot(state.ToArray());
                 _log.Info($"Snapshot taken. LastSequenceNr is {LastSequenceNr}.");
                 Context.IncrementCounter("SnapShotTaken");
             }
         }
+    }
+
+    internal class SelectableEnumItem
+    {
     }
 
     public class TheReferenceToThisActor

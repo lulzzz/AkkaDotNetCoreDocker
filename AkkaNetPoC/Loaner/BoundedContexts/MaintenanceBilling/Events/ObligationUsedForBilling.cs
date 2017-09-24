@@ -1,7 +1,6 @@
 ﻿using System;
-using Loaner.BoundedContexts.MaintenanceBilling.Events;
 
-namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates.State
+namespace Loaner.BoundedContexts.MaintenanceBilling.Events
 {
     public class ObligationUsedForBilling : IEvent
     {

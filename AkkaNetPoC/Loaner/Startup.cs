@@ -1,4 +1,6 @@
-﻿namespace Loaner
+﻿using System;
+
+namespace Loaner
 {
     using Akka.Actor;
     using Akka.Configuration;
@@ -23,7 +25,7 @@
             ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", GetConfiguration());
             LoanerActors.LittleActor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<LittleActor>(),"LittleActor");
             LoanerActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>(),"demo-supervisor");
-            
+            Console.WriteLine($"Supervisor's name is: {LoanerActors.AccountSupervisor.Path.Name}");
             var builder = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .SetBasePath(env.ContentRootPath);
@@ -48,39 +50,97 @@
         public static Config GetConfiguration()
         {
             var hocon = @" 
-                
-                akka.suppress-json-serializer-warning = on
+               akka 
+               {
+                    actor 
+                    {
+                     serializers 
+                        {
+                          hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"" 
+                        }
+                        serialization-bindings 
+                        {
+                            ""System.Object"" = hyperion
+                        }
+                    }
+                }
+                #akka.suppress-json-serializer-warning = on
                 
                 akka.actor.debug.lifecycle = on
                 akka.actor.debug.unhandled = on
                 
-                akka.loglevel = DEBUG
+                akka.loglevel = INFO
                 
                 akka.loggers=[""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]
-                
-                akka.actor.serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                akka.actor.serialization-bindings { ""System.Object"" = hyperion }
-                       
-                ## Postgresql         
-                akka.persistence.journal.plugin = ""akka.persistence.journal.postgresql""
-                akka.persistence.journal.postgresql.class = ""Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql""
-                akka.persistence.journal.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
-                akka.persistence.journal.postgresql.connection-timeout = 30s
-                akka.persistence.journal.postgresql.table-name = event_journal
-                akka.persistence.journal.postgresql.metadata-table-name = journal_metadata
-                akka.persistence.journal.postgresql.auto-initialize = on
-                akka.persistence.journal.postgresql.timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
-                akka.persistence.journal.postgresql.connection-string = ""host=localhost port=5433 dbname=akka_demo user=alfredherr password:Testing.123""
-                akka.persistence.journal.postgresql.stored-as = JSON                
+                     
+            ## Postgresql         
+            akka.persistence{
+	        journal {
+		        plugin = ""akka.persistence.journal.postgresql""
 
-                akka.persistence.snapshot-store.pugin = ""akka.persistence.snapshot-store.postgresql""
-                akka.persistence.snapshot-store.postgresql.class =""Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql""                
-                akka.persistence.snapshot-store.postgresql.plugin-dispatcher = ""akka.actor.default-dispatcher""
-                akka.persistence.snapshot-store.postgresql.connection-string = ""host=localhost port=5433 dbname=akka_demo user=alfredherr password:Testing.123""
-                akka.persistence.snapshot-store.postgresql.connection-timeout = 30s
-                akka.persistence.snapshot-store.postgresql.table-name = snapshot_store
-                akka.persistence.snapshot-store.postgresql.auto-initialize = on
-                akka.persistence.snapshot-store.postgresql.stored-as = JSON
+                postgresql {
+			        # qualified type name of the PostgreSql persistence journal actor
+			        class = ""Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql""
+
+                    # dispatcher used to drive journal actor
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+
+                    # connection string used for database access
+                    connection-string = ""Server=localhost;Port=5433;Database=akka_demo;User Id=alfredherr;Password=Testing.123;""
+
+			        # default SQL commands timeout
+			        connection-timeout = 30s
+
+                    # PostgreSql schema name to table corresponding with persistent journal
+                    schema-name = public
+
+                    # PostgreSql table corresponding with persistent journal
+                    table-name = event_journal
+
+                    # should corresponding journal table be initialized automatically
+                    auto-initialize = on
+
+                    # timestamp provider used for generation of journal entries timestamps
+                    timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
+
+                    # metadata table
+                    metadata-table-name = metadata
+
+                    # defines column db type used to store payload. Available option: BYTEA (default), JSON, JSONB
+                stored-as = BYTEA
+            }
+        }
+
+        snapshot-store {
+		        plugin = ""akka.persistence.snapshot-store.postgresql""
+
+                postgresql {
+			        # qualified type name of the PostgreSql persistence journal actor
+			        class = ""Akka.Persistence.PostgreSql.Snapshot.PostgreSqlSnapshotStore, Akka.Persistence.PostgreSql""
+
+                    # dispatcher used to drive journal actor
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+
+			        # connection string used for database access
+			        connection-string = ""Server=localhost;Port=5433;Database=akka_demo;User Id=alfredherr;Password=Testing.123;""
+
+			        # default SQL commands timeout
+			        connection-timeout = 30s
+
+                    # PostgreSql schema name to table corresponding with persistent journal
+                    schema-name = public
+
+                    # PostgreSql table corresponding with persistent journal
+                    table-name = snapshot_store
+
+                    # should corresponding journal table be initialized automatically
+                    auto-initialize = on
+
+                    # defines column db type used to store payload. Available option: BYTEA (default), JSON, JSONB
+                    stored-as = BYTEA
+		            }
+	            }
+            } 
 
                 ## SqLite
                 #akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
@@ -101,12 +161,12 @@
                 #akka.persistence.snapshot-store.sqlite.table-name = snapshot_store
                 #akka.persistence.snapshot-store.sqlite.auto-initialize = on
 
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.log-remote-lifecycle-events = DEBUG
-                akka.remote.dot-netty.tcp.hostname = ""127.0.0.1""
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.seed-nodes = [""akka.tcp://demo-system@127.0.0.1:4053""] 
-                akka.cluster.roles = [concord]
+                #akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                #akka.remote.log-remote-lifecycle-events = DEBUG
+                #akka.remote.dot-netty.tcp.hostname = ""127.0.0.1""
+                #akka.remote.dot-netty.tcp.port = 0
+                #akka.cluster.seed-nodes = [""akka.tcp://demo-system@127.0.0.1:4053""] 
+                #akka.cluster.roles = [concord]
            ";
             return ConfigurationFactory.ParseString(hocon);
 

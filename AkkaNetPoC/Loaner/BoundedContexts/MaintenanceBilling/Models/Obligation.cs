@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Immutable;
+using Newtonsoft.Json;
 
 namespace Loaner.BoundedContexts.MaintenanceBilling.Models
 {
     public class Obligation
     {
-        public ObligationStatus Status { get; private set; }
+        public ObligationStatus Status { get;  set; }
         private ImmutableDictionary<Guid, FinancialTransaction> Transactions { get; }
         private ImmutableDictionary<FinancialConcept, double> Buckets { get; }
-        public string ObligationNumber { get; }
+        public string ObligationNumber { get; set; }
         private double CurrentBalance { get; set; }
         private DateTime _OccurredOn { get; }
         private Guid _UniqueGuid { get; }
-        
 
+        
         public Obligation(string obligationNumber)  
         {
             ObligationNumber = obligationNumber;
@@ -23,7 +24,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Models
             Transactions = ImmutableDictionary.Create<Guid, FinancialTransaction>();
             Buckets = ImmutableDictionary.Create<FinancialConcept, double>();
         }
-
+        [JsonConstructor]
         public Obligation(string obligationNumber, ObligationStatus status)  
         {
             ObligationNumber = obligationNumber;

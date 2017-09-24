@@ -4,6 +4,7 @@
     {
         Active,
         PaidOff,
-        Cancelled
+        Cancelled,
+        Boarding
     }
 }
