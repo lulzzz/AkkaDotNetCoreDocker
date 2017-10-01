@@ -70,7 +70,7 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
             /* Assuming this is all we have to load for an account, then we can have the account
              * send the supervisor to add it to it's list -- then it can terminate. 
              */
-            command.MyNewParent.Tell(new SuperviseThisAccount(Self.Path.Name));
+            command.MyNewParent.Tell(new SuperviseThisAccount(command.Portfolio,Self.Path.Name));
             Self.Tell(PoisonPill.Instance);
         }
 

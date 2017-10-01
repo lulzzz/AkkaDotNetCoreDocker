@@ -4,6 +4,7 @@ namespace Loaner
 {
     using Akka.Actor;
     using Akka.Configuration;
+    using Akka.Routing;
     using api.ActorManagement;
     using BoundedContexts.MaintenanceBilling.Aggregates;
     using BoundedContexts.Test;
@@ -24,7 +25,7 @@ namespace Loaner
 
             ActorSystemRefs.ActorSystem = ActorSystem.Create("demo-system", GetConfiguration());
             LoanerActors.LittleActor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<LittleActor>(),"LittleActor");
-            LoanerActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>(),"demo-supervisor");
+            LoanerActors.AccountSupervisor = ActorSystemRefs.ActorSystem.ActorOf(Props.Create<AccountActorSupervisor>().WithRouter(new ConsistentHashingPool(10)),"demo-supervisor");
             Console.WriteLine($"Supervisor's name is: {LoanerActors.AccountSupervisor.Path.Name}");
             var builder = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
@@ -69,7 +70,7 @@ namespace Loaner
                 akka.actor.debug.lifecycle = on
                 akka.actor.debug.unhandled = on
                 
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 
                 akka.loggers=[""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]
                      
@@ -86,7 +87,7 @@ namespace Loaner
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
 
                     # connection string used for database access
-                    connection-string = ""Server=localhost;Port=5433;Database=akka_demo;User Id=alfredherr;Password=Testing.123;""
+                    connection-string = ""Server=localhost;Port=5433;Database=akka;User Id=alfredherr;Password=Testing.123;""
 
 			        # default SQL commands timeout
 			        connection-timeout = 30s
@@ -122,7 +123,7 @@ namespace Loaner
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
 
 			        # connection string used for database access
-			        connection-string = ""Server=localhost;Port=5433;Database=akka_demo;User Id=alfredherr;Password=Testing.123;""
+			        connection-string = ""Server=localhost;Port=5433;Database=akka;User Id=alfredherr;Password=Testing.123;""
 
 			        # default SQL commands timeout
 			        connection-timeout = 30s
@@ -167,6 +168,21 @@ namespace Loaner
                 #akka.remote.dot-netty.tcp.port = 0
                 #akka.cluster.seed-nodes = [""akka.tcp://demo-system@127.0.0.1:4053""] 
                 #akka.cluster.roles = [concord]
+
+#my-dispatcher {
+#    type = ForkJoinDispatcher
+#        throughput = 100000
+#        dedicated-thread-pool {
+#            thread-count = 1 
+#            threadtype = background
+#        }
+#}
+#akka.actor.deployment { 
+#    /demo-supervisor {
+#        dispatcher = my-dispatcher
+#    }
+#}
+
            ";
             return ConfigurationFactory.ParseString(hocon);
 

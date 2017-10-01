@@ -1,6 +1,8 @@
-﻿namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
+﻿using Akka.Routing;
+
+namespace Loaner.BoundedContexts.MaintenanceBilling.Aggregates
 {
-    public class SimulateBoardingOfAccounts
+    public class SimulateBoardingOfAccounts : IConsistentHashable
     {
         public SimulateBoardingOfAccounts(string clientName, string clientAccountsFilePath, string obligationsFilePath)
         {
@@ -12,5 +14,6 @@
         public string ClientName { get; }
         public string ClientAccountsFilePath { get; }
         public string ObligationsFilePath { get; }
+        public object ConsistentHashKey => ClientName;
     }
 }

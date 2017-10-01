@@ -4,11 +4,14 @@ namespace Loaner.BoundedContexts.MaintenanceBilling.Commands
 {
     public class AskToBeSupervised
     {
-        public AskToBeSupervised(IActorRef whoAmIAsking)
+        public AskToBeSupervised(string portfolio,IActorRef whoAmIAsking)
         {
             MyNewParent = whoAmIAsking;
+            Portfolio = portfolio;
         }
 
         public IActorRef MyNewParent { get; }
+        
+        public string Portfolio { get; }
     }
 }
